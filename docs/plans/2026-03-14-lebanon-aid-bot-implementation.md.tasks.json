@@ -1,0 +1,31 @@
+{
+  "planPath": "docs/plans/2026-03-14-lebanon-aid-bot-implementation.md",
+  "tasks": [
+    {"id": 7, "subject": "Task 0: Project scaffolding", "status": "pending"},
+    {"id": 8, "subject": "Task 1: Arabic text normalization utility", "status": "pending", "blockedBy": [7]},
+    {"id": 9, "subject": "Task 2: Vercel KV cache service", "status": "pending", "blockedBy": [7]},
+    {"id": 10, "subject": "Task 3: Google Sheets service", "status": "pending", "blockedBy": [7]},
+    {"id": 11, "subject": "Task 4: Geolocation service", "status": "pending", "blockedBy": [7]},
+    {"id": 12, "subject": "Task 5: Phone privacy utility", "status": "pending", "blockedBy": [7]},
+    {"id": 13, "subject": "Task 6: Lebanese dialect response texts", "status": "pending", "blockedBy": [7]},
+    {"id": 14, "subject": "Task 7: Twilio messaging service", "status": "pending", "blockedBy": [7]},
+    {"id": 15, "subject": "Task 8: Whisper voice transcription service", "status": "pending", "blockedBy": [7]},
+    {"id": 16, "subject": "Task 9: Intent router", "status": "pending", "blockedBy": [8]},
+    {"id": 17, "subject": "Task 10: Shelter feature", "status": "pending", "blockedBy": [9, 10]},
+    {"id": 18, "subject": "Task 11: Evacuation feature", "status": "pending", "blockedBy": [9, 10]},
+    {"id": 19, "subject": "Task 12: Medical feature", "status": "pending", "blockedBy": [9, 10]},
+    {"id": 20, "subject": "Task 13: Aid request feature (stateful)", "status": "pending", "blockedBy": [9, 10, 12]},
+    {"id": 21, "subject": "Task 14: Registration feature", "status": "pending", "blockedBy": [10, 13]},
+    {"id": 22, "subject": "Task 15: Volunteer notifier service", "status": "pending", "blockedBy": [10, 14]},
+    {"id": 23, "subject": "Task 16: Rate limiter middleware", "status": "pending", "blockedBy": [7]},
+    {"id": 24, "subject": "Task 17: Main menu handler", "status": "pending", "blockedBy": [13]},
+    {"id": 25, "subject": "Task 18: Webhook entry point (integration)", "status": "pending", "blockedBy": [13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24]},
+    {"id": 26, "subject": "Task 19: Telegram scraper", "status": "pending", "blockedBy": [8, 10]},
+    {"id": 27, "subject": "Task 20: OCHA scraper", "status": "pending", "blockedBy": [10]},
+    {"id": 28, "subject": "Task 21: Scraper scheduler", "status": "pending", "blockedBy": [10, 26, 27]},
+    {"id": 29, "subject": "Task 22: Cron endpoint", "status": "pending", "blockedBy": [28]},
+    {"id": 30, "subject": "Task 23: Full test suite run + cleanup", "status": "pending", "blockedBy": [25, 29]},
+    {"id": 31, "subject": "Task 24: Final integration test with curl", "status": "pending", "blockedBy": [30]}
+  ],
+  "lastUpdated": "2026-03-14T20:00:00Z"
+}
