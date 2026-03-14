@@ -1,0 +1,27 @@
+{
+  "name": "feat-lebanon-aid-bot",
+  "version": "1.0.0",
+  "description": "🇱🇧 WhatsApp humanitarian bot for displaced people in Lebanon — Arabic chatbot providing shelter locations, evacuation alerts, medical care points and aid requests via Twilio + Node.js",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "jest --verbose",
+    "test:watch": "jest --watch"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@vercel/kv": "^3.0.0",
+    "express": "^5.2.1",
+    "googleapis": "^171.4.0",
+    "openai": "^6.29.0",
+    "twilio": "^5.13.0"
+  },
+  "devDependencies": {
+    "jest": "^30.3.0",
+    "supertest": "^7.2.2"
+  }
+}
