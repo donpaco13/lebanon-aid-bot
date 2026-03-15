@@ -50,6 +50,8 @@ describe('handleAid', () => {
       zone: 'Hamra',
     }));
     expect(result.reply).toContain('✅');
+    expect(result.notifyVolunteer).toBe(true);
+    expect(result.ticketData).toMatchObject({ name: 'Ahmad', zone: 'Hamra', needType: 'أكل' });
     expect(kv.del).toHaveBeenCalled();
   });
 });

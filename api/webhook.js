@@ -1,7 +1,7 @@
 // api/webhook.js
 const express = require('express');
 const twilio = require('twilio');
-const { parseTwilioBody, sendMessage } = require('../src/services/twilio');
+const { parseTwilioBody, sendMessage, validateRequest } = require('../src/services/twilio');
 const { transcribeAudio } = require('../src/services/whisper');
 const { detectIntent } = require('../src/bot/router');
 const { handleShelter } = require('../src/features/shelter');
@@ -19,6 +19,17 @@ const app = express();
 app.use(express.urlencoded({ extended: false }));
 
 app.post('/api/webhook', async (req, res) => {
+  // Validate Twilio signature (P0 security requirement — prevents forged webhooks)
+  const isValid = validateRequest(
+    process.env.TWILIO_AUTH_TOKEN,
+    req.headers['x-twilio-signature'] || '',
+    process.env.TWILIO_WEBHOOK_URL || `https://${req.headers.host}/api/webhook`,
+    req.body
+  );
+  if (!isValid) {
+    return res.status(403).end();
+  }
+
   const twiml = new twilio.twiml.MessagingResponse();
 
   try {
@@ -43,7 +54,7 @@ app.post('/api/webhook', async (req, res) => {
       // Async transcription + response
       transcribeAudio(parsed.mediaUrl).then(async (transcribed) => {
         const replyText = transcribed
-          ? await processIntent(transcribed, parsed.from, location)
+          ? await processIntent(transcribed, phoneHash, location)
           : responses.MENU;
         await sendMessage(parsed.from, replyText);
       }).catch(() => {});
@@ -51,7 +62,7 @@ app.post('/api/webhook', async (req, res) => {
     }
 
     // Process text intent
-    const response = await processIntent(text, parsed.from, location);
+    const response = await processIntent(text, phoneHash, location);
     twiml.message(response);
     return res.type('text/xml').send(twiml.toString());
   } catch (err) {
@@ -61,7 +72,7 @@ app.post('/api/webhook', async (req, res) => {
   }
 });
 
-async function processIntent(text, from, location) {
+async function processIntent(text, phoneHash, location) {
   const { intent, zone } = detectIntent(text);
 
   switch (intent) {
@@ -90,7 +101,7 @@ async function processIntent(text, from, location) {
       return msg;
     }
     case 'aid': {
-      const result = await handleAid({ from, text });
+      const result = await handleAid({ phoneHash, text });
       if (result.notifyVolunteer && result.ticketData) {
         notifyVolunteers({
           ticket: result.ticketData.ticket,
@@ -99,7 +110,7 @@ async function processIntent(text, from, location) {
           need: result.ticketData.needType || '',
         }).catch(() => {});
       }
-      return result.response;
+      return result.reply;
     }
     case 'registration': {
       const result = await handleRegistration();
