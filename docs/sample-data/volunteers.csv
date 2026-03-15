@@ -1,0 +1,11 @@
+id,name,phone,org,zone,on_duty,shift_start,shift_end,language
+VOL-001,مريم خليل,+96171100001,كاريتاس لبنان,بيروت,TRUE,08:00,20:00,ar
+VOL-002,كريم نصر,+96170200002,الصليب الأحمر اللبناني,الحمرا,TRUE,12:00,00:00,ar
+VOL-003,سارة محمود,+96176300003,UNHCR Lebanon,صيدا,TRUE,06:00,18:00,en
+VOL-004,يوسف أيوب,+96178400004,World Food Programme,طرابلس,FALSE,08:00,16:00,ar
+VOL-005,Hélène Khoury,+96171500005,ACTED Lebanon,بيروت,FALSE,09:00,17:00,fr
+VOL-006,ربيع العلي,+96170600006,الهيئة العليا للإغاثة,الضاحية,TRUE,00:00,12:00,ar
+VOL-007,ديانا أبو شاكر,+96176700007,International Medical Corps,النبطية,FALSE,08:00,20:00,en
+VOL-008,حسن بيضون,+96178800008,مديرية الشؤون الاجتماعية,صور,TRUE,08:00,16:00,ar
+VOL-009,Maya Haddad,+96171900009,Save the Children,بيروت,FALSE,09:00,18:00,fr
+VOL-010,عمر دياب,+96170010010,IRC Lebanon,البقاع,TRUE,06:00,14:00,ar
