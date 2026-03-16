@@ -55,7 +55,11 @@ async function handleAid({ phoneHash, text }) {
     });
 
     await kv.del(stateKey);
-    return { reply: responses.AID_CONFIRMED(ticket) };
+    return {
+      reply: responses.AID_CONFIRMED(ticket),
+      notifyVolunteer: true,
+      ticketData: { ticket, name, zone, needType: need },
+    };
   }
 
   // Unknown state — restart

@@ -1,5 +1,6 @@
 // src/services/twilio.js
 const twilio = require('twilio');
+const { withRetry } = require('../utils/retry');
 
 let client = null;
 
@@ -10,11 +11,10 @@ function getClient() {
 }
 
 async function sendMessage(to, body) {
-  return getClient().messages.create({
-    from: process.env.TWILIO_PHONE_NUMBER,
-    to,
-    body,
-  });
+  return withRetry(
+    () => getClient().messages.create({ from: process.env.TWILIO_PHONE_NUMBER, to, body }),
+    { isRetryable: (err) => !err.status || err.status >= 500 }
+  );
 }
 
 function validateRequest(authToken, signature, url, params) {

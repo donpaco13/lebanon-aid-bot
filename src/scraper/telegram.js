@@ -1,7 +1,7 @@
 // src/scraper/telegram.js
 const { normalizeZone } = require('../utils/arabic');
 
-const CHANNEL_USERNAME = process.env.TELEGRAM_CHANNEL || '@IDFarabic';
+const CHANNEL_USERNAME = process.env.TELEGRAM_CHANNEL || '@IDFSpokespersonArabic';
 
 async function scrapeTelegram() {
   try {
