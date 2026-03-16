@@ -13,22 +13,24 @@
 Lebanon Aid Bot is a WhatsApp chatbot that helps displaced civilians in Lebanon find:
 
 - **Nearby shelters** with available capacity
-- **Evacuation alerts** for their zone (updated every 5 minutes)
+- **Evacuation alerts** for their zone
 - **Operational medical facilities** near them
 - **Aid requests** — food, blankets, medicine, other
 - **Displacement registration** guide (Ministry of Social Affairs)
 
-It also supports **voice messages** in Lebanese Arabic (transcribed via OpenAI Whisper) and **automatically pre-fills** shelter/evacuation data from OCHA Flash Updates and public Telegram channels, with human review before any data reaches users.
+It also supports **voice messages** in Lebanese Arabic (transcribed via OpenAI Whisper) and **automatically pre-fills** shelter/evacuation data from OCHA Flash Updates, with human review before any data reaches users.
+
+**Evacuation data** is managed editorially by the NGO team via Google Sheet — no external scrapers or military sources.
 
 ### Stack
 
 | Layer | Technology |
 |-------|-----------|
 | Runtime | Node.js (ESModules) |
-| Deployment | Vercel serverless |
+| Deployment | Cloudflare Workers (serverless) |
 | Messaging | Twilio WhatsApp API |
 | Data backend | Google Sheets API |
-| Cache | Vercel KV (Redis) |
+| Cache | KV cache |
 | Voice | OpenAI Whisper |
 | Tests | Jest (92 tests, 22 suites) |
 
@@ -46,13 +48,12 @@ bot/router.js       ──► Intent detection (keywords + menu digits)
       ├──► features/shelter.js       ──► cache.js ──► sheets.js
       ├──► features/evacuation.js    ──► cache.js ──► sheets.js
       ├──► features/medical.js       ──► cache.js ──► sheets.js
-      ├──► features/aid.js           ──► Vercel KV (stateful, 10 min TTL)
+      ├──► features/aid.js           ──► KV (stateful, 10 min TTL)
       │                               └──► notifier.js ──► volunteers sheet
       └──► features/registration.js  ──► cache.js ──► sheets.js
 
 GET /api/cron/scrape (every 30 min)
       │
-      ├──► scraper/telegram.js  ──► scheduler.js ──► sheets (needs_review=true)
       └──► scraper/ocha.js      ──► scheduler.js ──► sheets (needs_review=true)
 ```
 
@@ -115,7 +116,7 @@ The bot uses a single Google Spreadsheet with 6 tabs:
 | Tab | Purpose | Key columns |
 |-----|---------|-------------|
 | `shelters` | Shelter locations | zone_normalized, available_spots, status, verified_at |
-| `evacuations` | Active evacuation orders | zone_normalized, status, direction_ar, issued_at, expires_at |
+| `evacuations` | Active evacuation orders — managed by NGO team | zone_normalized, status, direction_ar, issued_at, expires_at |
 | `medical` | Hospitals / clinics | zone_normalized, type, status, last_verified_at |
 | `aid_requests` | User aid requests | ticket_number, name, zone, need_type, status, notified_at |
 | `volunteers` | On-duty volunteers | on_duty, shift_start, shift_end, language |
@@ -136,7 +137,7 @@ The bot uses a single Google Spreadsheet with 6 tabs:
 #### 1. Clone and install
 
 ```bash
-git clone https://github.com/your-org/lebanon-aid-bot
+git clone https://github.com/donpaco13/lebanon-aid-bot
 cd lebanon-aid-bot
 npm install
 ```
@@ -158,9 +159,8 @@ cp .env.example .env
 | `GOOGLE_SERVICE_ACCOUNT_EMAIL` | `service-account@project.iam.gserviceaccount.com` |
 | `GOOGLE_PRIVATE_KEY` | Service account private key (RSA) |
 | `OPENAI_API_KEY` | For Whisper voice transcription |
-| `TELEGRAM_BOT_TOKEN` | Telegram Bot API token (scraper) |
-| `KV_REST_API_URL` | Vercel KV REST endpoint |
-| `KV_REST_API_TOKEN` | Vercel KV token |
+| `KV_REST_API_URL` | KV REST endpoint |
+| `KV_REST_API_TOKEN` | KV token |
 | `PHONE_SALT_SECRET` | Random secret, minimum 32 characters |
 | `CRON_SECRET` | Random secret for cron endpoint authentication |
 
@@ -189,11 +189,11 @@ npm test
 # 92 tests, 22 suites — all should pass
 ```
 
-#### 6. Deploy to Vercel
+#### 6. Deploy
 
 ```bash
-vercel --prod
-# Set all environment variables in Vercel dashboard
+# Deploy to Cloudflare Workers
+# Set all environment variables in dashboard
 # Cron job (/api/cron/scrape) runs automatically every 30 minutes
 ```
 
@@ -205,7 +205,7 @@ api/
   cron/scrape.js        # Scraper cron endpoint (every 30 min)
 src/
   bot/
-    responses.js        # All Arabic user-facing strings (DO NOT inline elsewhere)
+    responses.js        # All user-facing strings (DO NOT inline elsewhere)
     router.js           # Intent detection
     menu.js             # Main menu
   features/
@@ -216,14 +216,13 @@ src/
     registration.js     # Registration guide
   services/
     sheets.js           # Google Sheets client (filters needs_review)
-    cache.js            # Vercel KV wrapper + TTL + stale backup
+    cache.js            # KV wrapper + TTL + stale backup
     twilio.js           # Twilio client + signature validation
     notifier.js         # Volunteer notifications
     whisper.js          # OpenAI Whisper transcription
     geo.js              # Haversine distance
     rateLimiter.js      # 30 msg/hr per user
   scraper/
-    telegram.js         # Telegram channel scraper
     ocha.js             # OCHA ReliefWeb scraper
     scheduler.js        # Deduplication + append to sheet
   utils/
@@ -256,22 +255,24 @@ docs/
 Lebanon Aid Bot est un chatbot WhatsApp qui aide les civils déplacés au Liban à trouver :
 
 - **Des abris proches** avec des places disponibles
-- **Des alertes d'évacuation** pour leur zone (mises à jour toutes les 5 minutes)
+- **Des alertes d'évacuation** pour leur zone
 - **Des établissements médicaux opérationnels** à proximité
 - **Des demandes d'aide** — nourriture, couvertures, médicaments, autre
 - **Un guide d'inscription** pour les déplacés (Ministère des Affaires Sociales)
 
-Le bot prend également en charge les **messages vocaux** en dialecte arabe libanais (transcrits via OpenAI Whisper) et **pré-remplit automatiquement** les données d'abris/évacuation depuis les mises à jour OCHA Flash et des canaux Telegram publics, avec une revue humaine avant que les données n'atteignent les utilisateurs.
+Le bot prend également en charge les **messages vocaux** en dialecte arabe libanais (transcrits via OpenAI Whisper) et **pré-remplit automatiquement** les données d'abris depuis les mises à jour OCHA Flash, avec une revue humaine avant que les données n'atteignent les utilisateurs.
+
+**Les données d'évacuation** sont gérées éditorialement par l'équipe ONG via Google Sheet — aucun scraper externe ni source militaire.
 
 ### Stack technique
 
 | Couche | Technologie |
 |--------|------------|
 | Runtime | Node.js (ESModules) |
-| Déploiement | Vercel serverless |
+| Déploiement | Cloudflare Workers (serverless) |
 | Messagerie | Twilio WhatsApp API |
 | Backend données | Google Sheets API |
-| Cache | Vercel KV (Redis) |
+| Cache | KV cache |
 | Voix | OpenAI Whisper |
 | Tests | Jest (92 tests, 22 suites) |
 
@@ -289,13 +290,12 @@ bot/router.js       ──► Détection d'intention (mots-clés + chiffres du m
       ├──► features/shelter.js       ──► cache.js ──► sheets.js
       ├──► features/evacuation.js    ──► cache.js ──► sheets.js
       ├──► features/medical.js       ──► cache.js ──► sheets.js
-      ├──► features/aid.js           ──► Vercel KV (stateful, TTL 10 min)
+      ├──► features/aid.js           ──► KV (stateful, TTL 10 min)
       │                               └──► notifier.js ──► feuille bénévoles
       └──► features/registration.js  ──► cache.js ──► sheets.js
 
 GET /api/cron/scrape (toutes les 30 min)
       │
-      ├──► scraper/telegram.js  ──► scheduler.js ──► sheets (needs_review=true)
       └──► scraper/ocha.js      ──► scheduler.js ──► sheets (needs_review=true)
 ```
 
@@ -346,7 +346,7 @@ Le bot utilise un seul Google Spreadsheet avec 6 onglets :
 | Onglet | Rôle | Colonnes clés |
 |--------|------|---------------|
 | `shelters` | Abris disponibles | zone_normalized, available_spots, status, verified_at |
-| `evacuations` | Ordres d'évacuation actifs | zone_normalized, status, direction_ar, issued_at, expires_at |
+| `evacuations` | Ordres d'évacuation actifs — gérés par l'équipe ONG | zone_normalized, status, direction_ar, issued_at, expires_at |
 | `medical` | Hôpitaux / cliniques | zone_normalized, type, status, last_verified_at |
 | `aid_requests` | Demandes d'aide utilisateurs | ticket_number, name, zone, need_type, status, notified_at |
 | `volunteers` | Bénévoles de garde | on_duty, shift_start, shift_end, language |
@@ -367,7 +367,7 @@ Le bot utilise un seul Google Spreadsheet avec 6 onglets :
 #### 1. Cloner et installer
 
 ```bash
-git clone https://github.com/your-org/lebanon-aid-bot
+git clone https://github.com/donpaco13/lebanon-aid-bot
 cd lebanon-aid-bot
 npm install
 ```
@@ -387,9 +387,8 @@ cp .env.example .env
 | `GOOGLE_SERVICE_ACCOUNT_EMAIL` | `compte@projet.iam.gserviceaccount.com` |
 | `GOOGLE_PRIVATE_KEY` | Clé privée du compte de service (RSA) |
 | `OPENAI_API_KEY` | Pour la transcription vocale Whisper |
-| `TELEGRAM_BOT_TOKEN` | Token API Telegram Bot (scraper) |
-| `KV_REST_API_URL` | Endpoint REST Vercel KV |
-| `KV_REST_API_TOKEN` | Token Vercel KV |
+| `KV_REST_API_URL` | Endpoint REST KV |
+| `KV_REST_API_TOKEN` | Token KV |
 | `PHONE_SALT_SECRET` | Secret aléatoire, minimum 32 caractères |
 | `CRON_SECRET` | Secret aléatoire pour l'authentification du cron |
 
@@ -414,11 +413,11 @@ npm test
 # 92 tests, 22 suites — tous doivent passer
 ```
 
-#### 6. Déployer sur Vercel
+#### 6. Déployer
 
 ```bash
-vercel --prod
-# Configurer les variables d'environnement dans le dashboard Vercel
+# Déployer sur Cloudflare Workers
+# Configurer les variables d'environnement dans le dashboard
 # Le cron (/api/cron/scrape) s'exécute automatiquement toutes les 30 minutes
 ```
 
@@ -430,7 +429,7 @@ api/
   cron/scrape.js        # Endpoint cron du scraper (toutes les 30 min)
 src/
   bot/
-    responses.js        # Tous les textes arabes côté utilisateur (ne pas inline ailleurs)
+    responses.js        # Tous les textes côté utilisateur (ne pas inline ailleurs)
     router.js           # Détection d'intention
     menu.js             # Menu principal
   features/
@@ -441,14 +440,13 @@ src/
     registration.js     # Guide d'inscription
   services/
     sheets.js           # Client Google Sheets (filtre needs_review)
-    cache.js            # Wrapper Vercel KV + TTL + backup stale
+    cache.js            # Wrapper KV + TTL + backup stale
     twilio.js           # Client Twilio + validation signature
     notifier.js         # Notifications bénévoles
     whisper.js          # Transcription OpenAI Whisper
     geo.js              # Distance haversine
     rateLimiter.js      # 30 msg/h par utilisateur
   scraper/
-    telegram.js         # Scraper canal Telegram
     ocha.js             # Scraper OCHA ReliefWeb
     scheduler.js        # Déduplication + ajout à la feuille
   utils/

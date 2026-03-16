@@ -1,10 +1,9 @@
 // src/scraper/scheduler.js
-const { scrapeTelegram } = require('./telegram');
 const { scrapeOCHA } = require('./ocha');
 const sheets = require('../services/sheets');
 
 async function run() {
-  const result = { telegramCount: 0, ochaCount: 0 };
+  const result = { ochaCount: 0 };
 
   // Load existing scraped entries to deduplicate
   let existing = [];
@@ -15,23 +14,8 @@ async function run() {
   }
   const existingIds = new Set(existing.map(r => r.source_id).filter(Boolean));
 
-  // Run scrapers
-  const [telegramItems, ochaItems] = await Promise.all([
-    scrapeTelegram().catch(() => []),
-    scrapeOCHA().catch(() => []),
-  ]);
-
-  // Append new Telegram items
-  for (const item of telegramItems) {
-    if (!existingIds.has(item.source_id)) {
-      try {
-        await sheets.appendRow('scraped_data', item);
-        result.telegramCount++;
-      } catch {
-        // Non-fatal
-      }
-    }
-  }
+  // Run OCHA scraper
+  const ochaItems = await scrapeOCHA().catch(() => []);
 
   // Append new OCHA items
   for (const item of ochaItems) {
