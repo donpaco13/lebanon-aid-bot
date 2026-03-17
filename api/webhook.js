@@ -58,7 +58,7 @@ app.post('/api/webhook', async (req, res) => {
       transcribeAudio(parsed.mediaUrl).then(async (transcribed) => {
         const replyText = transcribed
           ? await processIntent(transcribed, phoneHash, location)
-          : messages.t('MENU', 'ar');
+          : messages.t('MENU', lang);
         await sendMessage(parsed.from, replyText);
       }).catch(() => {});
       return;
