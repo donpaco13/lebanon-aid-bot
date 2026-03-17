@@ -168,4 +168,28 @@ describe('POST /api/webhook', () => {
     expect(res.status).toBe(200);
     expect(res.headers['content-type']).toContain('text/xml');
   });
+
+  // Language detection: English input should route through detectLanguage → 'en'
+  // The TwiML mock returns a fixed XML string, so we verify the response is valid XML
+  // and that detectLanguage is called correctly via the language utility unit tests.
+  // This test validates that an English message Body is accepted and processed without error.
+  test('English message body is processed without error', async () => {
+    const res = await request(app)
+      .post('/api/webhook')
+      .type('form')
+      .send({ Body: 'I need help', From: 'whatsapp:+441234567890', NumMedia: '0' });
+
+    expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toContain('text/xml');
+  });
+
+  test('French message body is processed without error', async () => {
+    const res = await request(app)
+      .post('/api/webhook')
+      .type('form')
+      .send({ Body: "J'ai besoin d'aide", From: 'whatsapp:+33123456789', NumMedia: '0' });
+
+    expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toContain('text/xml');
+  });
 });
