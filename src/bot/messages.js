@@ -102,7 +102,10 @@ Ou envoyez votre position 📍 pour trouver l'abri le plus proche.`,
 
 function t(key, lang, ...args) {
   const entry = STRINGS[key];
-  if (!entry) return '';
+  if (!entry) {
+    if (process.env.NODE_ENV !== 'production') throw new Error(`Unknown message key: ${key}`);
+    return '';
+  }
   const resolved = entry[lang] ?? entry['en'];
   return typeof resolved === 'function' ? resolved(...args) : resolved;
 }
@@ -115,7 +118,7 @@ function formatStaleWarning(cachedAt, lang) {
   const mm = String(date.getUTCMinutes()).padStart(2, '0');
   const time = `${hh}:${mm}`;
   const LABELS = {
-    ar: `⚠️ هيدي المعلومات تحققنا منها آخر مرة الساعة ${time}`,
+    ar: `⚠️ هيدي المعلومات تحققنا منها آخر مرة الساعة ${time} UTC`,
     en: `⚠️ This information was last verified at ${time} UTC`,
     fr: `⚠️ Ces informations ont été vérifiées pour la dernière fois à ${time} UTC`,
   };
@@ -161,7 +164,9 @@ function formatMedicalResult(facility, distance, lang) {
   if (distance !== undefined) msg += `\n📏 ${distance} km`;
   if (facility.last_verified_at) {
     const date = new Date(facility.last_verified_at);
-    const time = date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
+    const hh = String(date.getUTCHours()).padStart(2, '0');
+    const mm = String(date.getUTCMinutes()).padStart(2, '0');
+    const time = `${hh}:${mm}`;
     const verifiedLabel = { ar: 'آخر تحقق', en: 'Last verified', fr: 'Dernière vérification' };
     msg += `\n⚠️ ${verifiedLabel[lang] ?? verifiedLabel.en}: ${time}`;
   }
