@@ -2,11 +2,11 @@
 const { normalizeZone, ARABIC_TO_TOKEN } = require('../utils/arabic');
 
 const INTENT_KEYWORDS = {
-  shelter: ['ملجأ', 'مأوى', 'محل نام', 'وين نام', 'ملاجئ', 'مأوى'],
-  evacuation: ['إخلاء', 'هرب', 'طلعوا', 'خطر', 'اخلاء'],
-  medical: ['مستشفى', 'طبيب', 'دوا', 'جريح', 'إسعاف', 'مستشفيات', 'دكتور'],
-  aid: ['أكل', 'حرام', 'بطانية', 'مساعدة', 'فرشات', 'حرامات'],
-  registration: ['تسجيل', 'ورق', 'نازح', 'اتسجل', 'نازحين'],
+  shelter: ['ملجأ', 'مأوى', 'محل نام', 'وين نام', 'ملاجئ', 'shelter', 'abri'],
+  evacuation: ['إخلاء', 'هرب', 'طلعوا', 'خطر', 'اخلاء', 'evacuate', 'evacuation', 'évacuation'],
+  medical: ['مستشفى', 'طبيب', 'دوا', 'جريح', 'إسعاف', 'مستشفيات', 'دكتور', 'hospital', 'doctor', 'medicine', 'hôpital', 'médecin', 'hopital', 'medecin'],
+  aid: ['أكل', 'حرام', 'بطانية', 'مساعدة', 'فرشات', 'حرامات', 'food', 'blanket', 'help', 'nourriture', 'couverture', 'aide', 'besoin'],
+  registration: ['تسجيل', 'ورق', 'نازح', 'اتسجل', 'نازحين', 'register', 'displaced', 'enregistrer'],
 };
 
 const MENU_NUMBERS = { '1': 'shelter', '2': 'evacuation', '3': 'medical', '4': 'aid', '5': 'registration' };

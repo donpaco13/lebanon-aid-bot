@@ -56,3 +56,45 @@ describe('detectIntent', () => {
     expect(detectIntent('رجعني')).toEqual({ intent: 'menu', zone: null });
   });
 });
+
+describe('detectIntent — English/French keywords', () => {
+  test('detects shelter from English keyword', () => {
+    expect(detectIntent('I need a shelter')).toEqual({ intent: 'shelter', zone: null });
+  });
+
+  test('detects shelter from French keyword', () => {
+    expect(detectIntent('abri proche')).toEqual({ intent: 'shelter', zone: null });
+  });
+
+  test('detects medical from English keyword', () => {
+    expect(detectIntent('nearest hospital')).toEqual({ intent: 'medical', zone: null });
+  });
+
+  test('detects medical from French keyword', () => {
+    expect(detectIntent('médecin disponible')).toEqual({ intent: 'medical', zone: null });
+  });
+
+  test('detects evacuation from English keyword', () => {
+    expect(detectIntent('evacuate now')).toEqual({ intent: 'evacuation', zone: null });
+  });
+
+  test('detects evacuation from French keyword', () => {
+    expect(detectIntent('évacuation urgente')).toEqual({ intent: 'evacuation', zone: null });
+  });
+
+  test('detects aid from English keyword', () => {
+    expect(detectIntent('I need food')).toEqual({ intent: 'aid', zone: null });
+  });
+
+  test('detects aid from French keyword', () => {
+    expect(detectIntent("besoin de nourriture")).toEqual({ intent: 'aid', zone: null });
+  });
+
+  test('detects registration from English keyword', () => {
+    expect(detectIntent('register as displaced')).toEqual({ intent: 'registration', zone: null });
+  });
+
+  test('menu trigger works for "menu"', () => {
+    expect(detectIntent('menu')).toEqual({ intent: 'menu', zone: null });
+  });
+});
