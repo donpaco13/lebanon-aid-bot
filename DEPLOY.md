@@ -71,7 +71,7 @@ Set these in Vercel (Settings → Environment Variables) **and** in a local `.en
 |----------|-------------|
 | `TWILIO_ACCOUNT_SID` | Twilio account SID |
 | `TWILIO_AUTH_TOKEN` | Twilio auth token |
-| `TWILIO_WHATSAPP_FROM` | Your Twilio WhatsApp number (`whatsapp:+14155238886` for sandbox) |
+| `TWILIO_PHONE_NUMBER` | Your Twilio WhatsApp number (`whatsapp:+14155238886` for sandbox) |
 | `GOOGLE_SHEETS_ID` | Google Spreadsheet ID |
 | `GOOGLE_SERVICE_ACCOUNT_EMAIL` | Service account `client_email` |
 | `GOOGLE_PRIVATE_KEY` | Service account `private_key` (keep `\n` as literal `\n` in Vercel) |
@@ -149,7 +149,7 @@ Add rows to Google Sheets manually (or via NGO data import):
 - `registration_info`: add steps 1–N with `text_ar` instructions.
 - `volunteers`: add volunteer records with `on_duty=TRUE` for those currently on shift.
 
-> Scraped data from Telegram/OCHA enters the sheet with `needs_review=TRUE` and is **never shown to users until a human reviews and sets `needs_review=FALSE`**.
+> Scraped data from OCHA enters the sheet with `needs_review=TRUE` and is **never shown to users until a human reviews and sets `needs_review=FALSE`**.
 
 ---
 
@@ -207,6 +207,6 @@ TwiML response -> Twilio -> WhatsApp user
 Vercel Cron (every 30min)
     |  GET /api/cron/scrape
     v
-Telegram IDF channel + OCHA Flash Updates
+OCHA Flash Updates
     -> Scraped rows in Google Sheets (needs_review=true)
 ```
