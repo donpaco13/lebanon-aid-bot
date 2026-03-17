@@ -15,15 +15,15 @@ const mockSteps = [
 describe('handleRegistration', () => {
   beforeEach(() => jest.clearAllMocks());
 
-  test('returns formatted registration steps from sheet', async () => {
+  test('returns raw registration steps from sheet', async () => {
     cache.getFromCache.mockResolvedValue(null);
     sheets.fetchSheet.mockResolvedValue(mockSteps);
     cache.setCache.mockResolvedValue();
 
     const result = await handleRegistration();
     expect(result.steps).toHaveLength(2);
-    expect(result.steps[0]).toContain('خطوة 1');
-    expect(result.steps[0]).toContain('unhcr.org');
+    expect(result.steps[0]).toEqual(mockSteps[0]);
+    expect(result.steps[0].link).toBe('https://unhcr.org');
   });
 
   test('returns steps from cache if available', async () => {

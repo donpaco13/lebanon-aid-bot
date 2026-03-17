@@ -1,7 +1,6 @@
 // src/features/registration.js
 const cache = require('../services/cache');
 const sheets = require('../services/sheets');
-const responses = require('../bot/responses');
 
 const CACHE_KEY = 'registration:steps';
 
@@ -31,8 +30,7 @@ async function handleRegistration() {
     }
   }
 
-  const steps = data.map(step => responses.formatRegistrationStep(step));
-  return { steps, stale, cachedAt };
+  return { steps: data, stale, cachedAt };
 }
 
 module.exports = { handleRegistration };
