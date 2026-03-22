@@ -1,7 +1,7 @@
 // src/features/aid.js
 const { kv } = require('@vercel/kv');
-const sheets = require('../services/sheets');
 const { t } = require('../bot/messages');
+const logger = require('../utils/logger');
 
 const STATE_TTL = 600;
 
@@ -15,7 +15,16 @@ function generateTicket() {
   return 'AID-' + Date.now().toString(36).toUpperCase();
 }
 
-async function handleAid({ phoneHash, text, lang = 'en' }) {
+// Accepts "1", "2, 3", "1 2 3", "1,2,3" → deduplicated array of need labels.
+// Falls back to raw text if no digit 1-4 is found (free-text entry).
+function parseNeeds(text, needMap) {
+  const digits = text.match(/[1-4]/g) || [];
+  const unique = [...new Set(digits)];
+  if (unique.length === 0) return [text.trim()];
+  return unique.map(d => needMap[d]).filter(Boolean);
+}
+
+async function handleAid({ phoneHash, text, lang = 'ar' }) {
   const stateKey = `aid:${phoneHash}`;
   const state = await kv.get(stateKey);
 
@@ -24,7 +33,6 @@ async function handleAid({ phoneHash, text, lang = 'en' }) {
     return { reply: t('AID_ASK_NAME', lang) };
   }
 
-  // Use stored lang for consistency across the flow
   const sessionLang = state.lang || lang;
   const { step, name, zone } = state;
 
@@ -39,24 +47,31 @@ async function handleAid({ phoneHash, text, lang = 'en' }) {
   }
 
   if (step === 'ask_need') {
-    const needMap = NEED_MAP[sessionLang] ?? NEED_MAP.en;
-    const need = needMap[text.trim()] || text.trim();
+    const needMap = NEED_MAP[sessionLang] ?? NEED_MAP.ar;
+    const needs = parseNeeds(text, needMap);
+    const needLabel = needs.join(', ');
     const ticket = generateTicket();
     const now = new Date().toISOString();
 
-    await sheets.appendRow('aid_requests', {
-      ticket, name, zone, need,
-      phone_hash: phoneHash,
+    // Read lang:phoneHash (authoritative preference) — falls back to session lang
+    // if the key is missing (e.g. tests or legacy sessions).
+    const confirmedLang = (await kv.get(`lang:${phoneHash}`)) || sessionLang;
+
+    logger.info('aid_request_submitted', {
+      ticket,
+      phoneHash,
+      name,
+      zone,
+      need: needLabel,
+      lang: confirmedLang,
       submitted_at: now,
-      notified_at: '',
-      status: 'pending',
     });
 
     await kv.del(stateKey);
     return {
-      reply: t('AID_CONFIRMED', sessionLang, ticket),
+      reply: t('AID_CONFIRMED', confirmedLang, ticket),
       notifyVolunteer: true,
-      ticketData: { ticket, name, zone, needType: need },
+      ticketData: { ticket, name, zone, needType: needLabel },
     };
   }
 
