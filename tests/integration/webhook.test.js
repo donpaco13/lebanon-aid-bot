@@ -192,4 +192,65 @@ describe('POST /api/webhook', () => {
     expect(res.status).toBe(200);
     expect(res.headers['content-type']).toContain('text/xml');
   });
+
+  // Bug 1: emergency fallback when both cache and stale are unavailable
+  test('returns EMERGENCY_FALLBACK (not ERROR_SHEETS_DOWN) when cache and stale both unavailable', async () => {
+    cache.getFromCache.mockResolvedValue(null);
+    sheets.fetchSheet.mockRejectedValue(new Error('Sheets down'));
+    cache.getStaleOrNull.mockResolvedValue(null);
+
+    const messages = require('../../src/bot/messages');
+    const spy = jest.spyOn(messages, 't');
+
+    const res = await request(app)
+      .post('/api/webhook')
+      .type('form')
+      .send({ Body: '1', From: 'whatsapp:+961700000099', NumMedia: '0' });
+
+    expect(res.status).toBe(200);
+    expect(spy).toHaveBeenCalledWith('EMERGENCY_FALLBACK', expect.any(String));
+    spy.mockRestore();
+  });
+
+  // Bug 2+3: aid flow continues when KV state exists — free text is not misrouted to menu
+  test('continues aid flow when KV has active state, advances step from ask_name to ask_zone', async () => {
+    const { kv } = require('@vercel/kv');
+    kv.get.mockImplementation(async (key) => {
+      if (key.startsWith('aid:')) return { step: 'ask_name', lang: 'fr' };
+      return null;
+    });
+
+    const res = await request(app)
+      .post('/api/webhook')
+      .type('form')
+      .send({ Body: 'François', From: 'whatsapp:+33100000001', NumMedia: '0' });
+
+    expect(res.status).toBe(200);
+    expect(kv.set).toHaveBeenCalledWith(
+      expect.stringContaining('aid:'),
+      expect.objectContaining({ step: 'ask_zone', name: 'François', lang: 'fr' }),
+      expect.any(Object)
+    );
+  });
+
+  // Bug 2: language stored in KV state is persisted to next step, not re-detected from text
+  test('persists stored lang into next KV state when user sends a name during aid flow', async () => {
+    const { kv } = require('@vercel/kv');
+    kv.get.mockImplementation(async (key) => {
+      if (key.startsWith('aid:')) return { step: 'ask_name', lang: 'fr' };
+      return null;
+    });
+
+    await request(app)
+      .post('/api/webhook')
+      .type('form')
+      .send({ Body: 'Marie', From: 'whatsapp:+33100000002', NumMedia: '0' });
+
+    // The KV state must carry lang:'fr' forward — not 'en' (which detectLanguage would infer from 'Marie')
+    expect(kv.set).toHaveBeenCalledWith(
+      expect.stringContaining('aid:'),
+      expect.objectContaining({ step: 'ask_zone', name: 'Marie', lang: 'fr' }),
+      expect.any(Object)
+    );
+  });
 });

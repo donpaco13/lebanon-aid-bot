@@ -93,6 +93,32 @@ Ou envoyez votre position 📍 pour trouver l'abri le plus proche.`,
     en: (ticket) => `✅ Your request has been registered — ticket: ${ticket}\nA volunteer will contact you shortly.`,
     fr: (ticket) => `✅ Votre demande a été enregistrée — ticket : ${ticket}\nUn bénévole vous contactera dès que possible.`,
   },
+  EMERGENCY_FALLBACK: {
+    ar: `⚠️ قاعدة البيانات عم تتحمّل. إتصل هلق بهيدي الأرقام:
+
+🔴 الصليب الأحمر اللبناني (24/7): 140
+🚒 الدفاع المدني: 125
+👮 الشرطة: 112
+🔥 إطفاء الحرائق: 175
+🇺🇳 UNHCR تسجيل (إثنين-جمعة 8-17): 04726111
+🌾 WFP غذاء (إثنين-سبت 8-19): 1526`,
+    en: `⚠️ Detailed data is loading. Call these numbers now:
+
+🔴 Lebanese Red Cross (24/7): 140
+🚒 Civil Defence: 125
+👮 Police: 112
+🔥 Firefighters: 175
+🇺🇳 UNHCR registration (Mon-Fri 8am-5pm): 04726111
+🌾 WFP food aid (Mon-Sat 8am-7pm): 1526`,
+    fr: `⚠️ Les données détaillées sont en cours de chargement. Appelez ces numéros maintenant :
+
+🔴 Croix-Rouge Libanaise (24h/7j) : 140
+🚒 Défense Civile : 125
+👮 Police : 112
+🔥 Pompiers : 175
+🇺🇳 UNHCR enregistrement (lun-ven 8h-17h) : 04726111
+🌾 WFP aide alimentaire (lun-sam 8h-19h) : 1526`,
+  },
   RATE_LIMITED: {
     ar: '⚠️ عم تبعت كتير رسائل. استنى شوي وجرّب بعدين.',
     en: '⚠️ You are sending too many messages. Please wait a moment and try again.',

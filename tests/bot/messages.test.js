@@ -45,6 +45,29 @@ describe('t()', () => {
   });
 });
 
+describe('EMERGENCY_FALLBACK', () => {
+  test('returns Arabic fallback containing Croix-Rouge (140) and Civil Defence (125)', () => {
+    const msg = t('EMERGENCY_FALLBACK', 'ar');
+    expect(msg).toContain('140');
+    expect(msg).toContain('125');
+    expect(msg).toContain('112');
+  });
+
+  test('returns English fallback containing emergency numbers', () => {
+    const msg = t('EMERGENCY_FALLBACK', 'en');
+    expect(msg).toContain('140');
+    expect(msg).toContain('125');
+    expect(msg).toContain('1526');
+  });
+
+  test('returns French fallback containing emergency numbers', () => {
+    const msg = t('EMERGENCY_FALLBACK', 'fr');
+    expect(msg).toContain('140');
+    expect(msg).toContain('04726111');
+    expect(msg).toContain('175');
+  });
+});
+
 describe('formatShelterResult()', () => {
   const shelter = {
     name_ar: 'ملجأ الحمرا',
