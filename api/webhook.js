@@ -47,7 +47,7 @@ app.post('/api/webhook', async (req, res) => {
     const rateCheck = await checkRateLimit(phoneHash);
     if (!rateCheck.allowed && !BYPASS_RATE_LIMIT.has(trimmedLower)) {
       // Bug 2 fix: use stored lang (not detectLanguage) for the rate-limit message.
-      const lang = (await kv.get(`lang:${phoneHash}`)) || 'ar';
+      const lang = (await kv.get(`lang:${phoneHash}`).catch(() => null)) || 'ar';
       twiml.message(messages.t('RATE_LIMITED', lang));
       return res.type('text/xml').send(twiml.toString());
     }
