@@ -128,7 +128,10 @@ Bonjour 🇫🇷 Choisissez votre langue:
 👮 الشرطة: 112
 🔥 إطفاء الحرائق: 175
 🇺🇳 UNHCR تسجيل (إثنين-جمعة 8-17): 04726111
-🌾 WFP غذاء (إثنين-سبت 8-19): 1526`,
+🌾 WFP غذاء (إثنين-سبت 8-19): 1526
+🏥 وزارة الصحة — طوارئ صحية: 1787
+💊 أدوية أمراض خطيرة (MoPH): 1214
+🧠 دعم نفسي / منع الانتحار: 1564`,
     en: `⚠️ Detailed data is loading. Call these numbers now:
 
 🔴 Lebanese Red Cross (24/7): 140
@@ -136,7 +139,10 @@ Bonjour 🇫🇷 Choisissez votre langue:
 👮 Police: 112
 🔥 Firefighters: 175
 🇺🇳 UNHCR registration (Mon-Fri 8am-5pm): 04726111
-🌾 WFP food aid (Mon-Sat 8am-7pm): 1526`,
+🌾 WFP food aid (Mon-Sat 8am-7pm): 1526
+🏥 MoPH health emergencies: 1787
+💊 Medications for serious illness (MoPH): 1214
+🧠 Suicide prevention / psychological distress: 1564`,
     fr: `⚠️ Les données détaillées sont en cours de chargement. Appelez ces numéros maintenant :
 
 🔴 Croix-Rouge Libanaise (24h/7j) : 140
@@ -144,7 +150,10 @@ Bonjour 🇫🇷 Choisissez votre langue:
 👮 Police : 112
 🔥 Pompiers : 175
 🇺🇳 UNHCR enregistrement (lun-ven 8h-17h) : 04726111
-🌾 WFP aide alimentaire (lun-sam 8h-19h) : 1526`,
+🌾 WFP aide alimentaire (lun-sam 8h-19h) : 1526
+🏥 MoPH urgences santé : 1787
+💊 Médicaments maladies graves (MoPH) : 1214
+🧠 Prévention suicide / détresse psychologique : 1564`,
   },
   RATE_LIMITED: {
     ar: '⚠️ عم تبعت كتير رسائل. استنى شوي وجرّب بعدين.',
