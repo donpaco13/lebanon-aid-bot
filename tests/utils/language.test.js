@@ -31,14 +31,15 @@ describe('detectLanguage', () => {
     expect(detectLanguage('help مرحبا')).toBe('ar');
   });
 
-  test('defaults to en for unrecognised input', () => {
-    expect(detectLanguage('')).toBe('en');
-    expect(detectLanguage(null)).toBe('en');
-    expect(detectLanguage('123')).toBe('en');
-    expect(detectLanguage('menu')).toBe('en');
+  test('defaults to ar for unrecognised input (majority of users are Arabic speakers)', () => {
+    expect(detectLanguage('')).toBe('ar');
+    expect(detectLanguage(null)).toBe('ar');
+    expect(detectLanguage('123')).toBe('ar');
+    expect(detectLanguage('menu')).toBe('ar');
   });
 
-  test('menu keyword detected as English', () => {
-    expect(detectLanguage('menu')).toBe('en');
+  test('single digits 1-5 default to ar', () => {
+    expect(detectLanguage('1')).toBe('ar');
+    expect(detectLanguage('5')).toBe('ar');
   });
 });

@@ -13,12 +13,12 @@ const EN_KEYWORDS = [
 ];
 
 function detectLanguage(text) {
-  if (!text) return 'en';
+  if (!text) return 'ar';
   if (ARABIC_RANGE.test(text)) return 'ar';
   const lower = text.toLowerCase();
   if (FR_KEYWORDS.some(kw => lower.includes(kw))) return 'fr';
   if (EN_KEYWORDS.some(kw => lower.includes(kw))) return 'en';
-  return 'en';
+  return 'ar';
 }
 
 module.exports = { detectLanguage };

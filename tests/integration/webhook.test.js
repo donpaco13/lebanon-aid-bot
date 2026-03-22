@@ -193,6 +193,64 @@ describe('POST /api/webhook', () => {
     expect(res.headers['content-type']).toContain('text/xml');
   });
 
+  // Lang persistence: non-digit message saves detected lang to KV
+  test('saves detected language to KV under lang:phoneHash on non-digit message', async () => {
+    cache.getFromCache.mockResolvedValue(null);
+    sheets.fetchSheet.mockRejectedValue(new Error('down'));
+    cache.getStaleOrNull.mockResolvedValue(null);
+
+    const { kv } = require('@vercel/kv');
+
+    await request(app)
+      .post('/api/webhook')
+      .type('form')
+      .send({ Body: 'bonjour', From: 'whatsapp:+33200000001', NumMedia: '0' });
+
+    expect(kv.set).toHaveBeenCalledWith(
+      expect.stringContaining('lang:'),
+      'fr',
+      expect.any(Object)
+    );
+  });
+
+  // Lang persistence: digit message reads stored lang from KV
+  test('reads stored lang from KV when user sends a bare digit', async () => {
+    cache.getFromCache.mockResolvedValue(null);
+    sheets.fetchSheet.mockRejectedValue(new Error('down'));
+    cache.getStaleOrNull.mockResolvedValue(null);
+
+    const { kv } = require('@vercel/kv');
+    kv.get.mockImplementation(async (key) => {
+      if (key.startsWith('lang:')) return 'fr';
+      return null;
+    });
+
+    await request(app)
+      .post('/api/webhook')
+      .type('form')
+      .send({ Body: '2', From: 'whatsapp:+33200000002', NumMedia: '0' });
+
+    expect(kv.get).toHaveBeenCalledWith(expect.stringContaining('lang:'));
+  });
+
+  // Lang persistence: digit with no stored lang defaults to 'ar'
+  test('defaults to ar when digit sent with no stored lang in KV', async () => {
+    cache.getFromCache.mockResolvedValue(null);
+    sheets.fetchSheet.mockRejectedValue(new Error('down'));
+    cache.getStaleOrNull.mockResolvedValue(null);
+
+    const messages = require('../../src/bot/messages');
+    const spy = jest.spyOn(messages, 't');
+
+    await request(app)
+      .post('/api/webhook')
+      .type('form')
+      .send({ Body: '3', From: 'whatsapp:+96100000099', NumMedia: '0' });
+
+    expect(spy).toHaveBeenCalledWith('EMERGENCY_FALLBACK', 'ar');
+    spy.mockRestore();
+  });
+
   // Bug 1: emergency fallback when both cache and stale are unavailable
   test('returns EMERGENCY_FALLBACK (not ERROR_SHEETS_DOWN) when cache and stale both unavailable', async () => {
     cache.getFromCache.mockResolvedValue(null);

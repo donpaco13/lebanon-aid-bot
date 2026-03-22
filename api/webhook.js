@@ -94,7 +94,17 @@ async function processIntent(text, phoneHash, location) {
     return result.reply;
   }
 
-  const lang = detectLanguage(text);
+  // For bare digits (1-5), detectLanguage can't signal intent — use stored lang or 'ar'.
+  // For all other messages, detect from text then persist to KV for future digit messages.
+  const DIGIT_ONLY = /^[1-5]$/.test(text.trim());
+  let lang;
+  if (DIGIT_ONLY) {
+    lang = (await kv.get(`lang:${phoneHash}`)) || 'ar';
+  } else {
+    lang = detectLanguage(text);
+    kv.set(`lang:${phoneHash}`, lang, { ex: 86400 }).catch(() => {});
+  }
+
   const { intent, zone } = detectIntent(text);
 
   switch (intent) {
