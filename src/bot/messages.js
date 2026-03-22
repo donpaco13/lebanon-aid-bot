@@ -93,6 +93,16 @@ Ou envoyez votre position 📍 pour trouver l'abri le plus proche.`,
     en: (ticket) => `✅ Your request has been registered — ticket: ${ticket}\nA volunteer will contact you shortly.`,
     fr: (ticket) => `✅ Votre demande a été enregistrée — ticket : ${ticket}\nUn bénévole vous contactera dès que possible.`,
   },
+  ONBOARDING: (() => {
+    const msg = `مرحباً 🇱🇧 اختر لغتك:
+Hello 🌍 Choose your language:
+Bonjour 🇫🇷 Choisissez votre langue:
+
+1️⃣ العربية
+2️⃣ English
+3️⃣ Français`;
+    return { ar: msg, en: msg, fr: msg };
+  })(),
   EMERGENCY_FALLBACK: {
     ar: `⚠️ قاعدة البيانات عم تتحمّل. إتصل هلق بهيدي الأرقام:
 

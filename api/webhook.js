@@ -77,11 +77,21 @@ app.post('/api/webhook', async (req, res) => {
 });
 
 async function processIntent(text, phoneHash, location) {
-  // Fix 2+3: check for active aid flow BEFORE intent detection so free-text replies
-  // (name, zone, need) are not misrouted to the menu.
+  const trimmed = text.trim();
+  const lower = trimmed.toLowerCase();
+
+  // Universal menu/cancel triggers — work in any state, any language.
+  // Checked first so "0"/"retour" always escape any flow.
+  if (['0', 'menu', 'قائمة', 'retour'].includes(lower)) {
+    const lang = (await kv.get(`lang:${phoneHash}`)) || 'ar';
+    await kv.del(`aid:${phoneHash}`).catch(() => {});
+    return messages.t('MENU', lang);
+  }
+
+  // Active aid flow — free-text replies (name, zone, need) must not be misrouted.
   const aidState = await kv.get(`aid:${phoneHash}`);
   if (aidState) {
-    const sessionLang = aidState.lang || 'en';
+    const sessionLang = aidState.lang || 'ar';
     const result = await handleAid({ phoneHash, text, lang: sessionLang });
     if (result.notifyVolunteer && result.ticketData) {
       notifyVolunteers({
@@ -94,15 +104,34 @@ async function processIntent(text, phoneHash, location) {
     return result.reply;
   }
 
-  // For bare digits (1-5), detectLanguage can't signal intent — use stored lang or 'ar'.
-  // For all other messages, detect from text then persist to KV for future digit messages.
-  const DIGIT_ONLY = /^[1-5]$/.test(text.trim());
+  // Onboarding — new users have no stored lang.
+  const storedLang = await kv.get(`lang:${phoneHash}`);
+  if (storedLang === null) {
+    const onboarding = await kv.get(`onboarding:${phoneHash}`);
+    if (onboarding) {
+      const langMap = { '1': 'ar', '2': 'en', '3': 'fr' };
+      const chosen = langMap[trimmed];
+      if (chosen) {
+        await Promise.all([
+          kv.set(`lang:${phoneHash}`, chosen), // no TTL — permanent preference
+          kv.del(`onboarding:${phoneHash}`),
+        ]);
+        return messages.t('MENU', chosen);
+      }
+    }
+    // New user or invalid choice — show trilingue onboarding
+    await kv.set(`onboarding:${phoneHash}`, true, { ex: 3600 });
+    return messages.t('ONBOARDING', 'ar');
+  }
+
+  // Known user — resolve effective lang for this message.
+  const DIGIT_ONLY = /^[1-5]$/.test(trimmed);
   let lang;
   if (DIGIT_ONLY) {
-    lang = (await kv.get(`lang:${phoneHash}`)) || 'ar';
+    lang = storedLang; // already fetched above
   } else {
     lang = detectLanguage(text);
-    kv.set(`lang:${phoneHash}`, lang, { ex: 86400 }).catch(() => {});
+    kv.set(`lang:${phoneHash}`, lang).catch(() => {});
   }
 
   const { intent, zone } = detectIntent(text);
@@ -110,7 +139,6 @@ async function processIntent(text, phoneHash, location) {
   switch (intent) {
     case 'shelter': {
       const result = await handleShelter({ zone, location });
-      // Fix 1: show emergency numbers instead of generic error when data unavailable
       if (result.error) return messages.t('EMERGENCY_FALLBACK', lang);
       if (result.shelters.length === 0) return messages.t('NO_RESULTS', lang);
       let msg = result.shelters.map(s => messages.formatShelterResult(s, s.distance, lang)).join('\n\n');

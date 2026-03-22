@@ -193,13 +193,187 @@ describe('POST /api/webhook', () => {
     expect(res.headers['content-type']).toContain('text/xml');
   });
 
-  // Lang persistence: non-digit message saves detected lang to KV
-  test('saves detected language to KV under lang:phoneHash on non-digit message', async () => {
+  // Onboarding: new user (no lang in KV) receives trilingue onboarding
+  test('new user with no stored lang receives onboarding and sets onboarding state in KV', async () => {
+    const { kv } = require('@vercel/kv');
+    kv.get.mockResolvedValue(null); // no aid, no lang, no onboarding state
+
+    await request(app)
+      .post('/api/webhook')
+      .type('form')
+      .send({ Body: 'مرحبا', From: 'whatsapp:+96100000010', NumMedia: '0' });
+
+    expect(kv.set).toHaveBeenCalledWith(
+      expect.stringContaining('onboarding:'),
+      true,
+      expect.any(Object)
+    );
+  });
+
+  // Onboarding: user selects Arabic (1) — lang saved without TTL, onboarding cleared
+  test('user in onboarding selects "1" — saves lang:ar without TTL and deletes onboarding key', async () => {
+    const { kv } = require('@vercel/kv');
+    kv.get.mockImplementation(async (key) => {
+      if (key.startsWith('onboarding:')) return true;
+      return null;
+    });
+
+    await request(app)
+      .post('/api/webhook')
+      .type('form')
+      .send({ Body: '1', From: 'whatsapp:+96100000011', NumMedia: '0' });
+
+    expect(kv.set).toHaveBeenCalledWith(expect.stringContaining('lang:'), 'ar');
+    expect(kv.del).toHaveBeenCalledWith(expect.stringContaining('onboarding:'));
+  });
+
+  // Onboarding: user selects English (2)
+  test('user in onboarding selects "2" — saves lang:en', async () => {
+    const { kv } = require('@vercel/kv');
+    kv.get.mockImplementation(async (key) => {
+      if (key.startsWith('onboarding:')) return true;
+      return null;
+    });
+
+    await request(app)
+      .post('/api/webhook')
+      .type('form')
+      .send({ Body: '2', From: 'whatsapp:+96100000012', NumMedia: '0' });
+
+    expect(kv.set).toHaveBeenCalledWith(expect.stringContaining('lang:'), 'en');
+  });
+
+  // Onboarding: user selects French (3)
+  test('user in onboarding selects "3" — saves lang:fr', async () => {
+    const { kv } = require('@vercel/kv');
+    kv.get.mockImplementation(async (key) => {
+      if (key.startsWith('onboarding:')) return true;
+      return null;
+    });
+
+    await request(app)
+      .post('/api/webhook')
+      .type('form')
+      .send({ Body: '3', From: 'whatsapp:+96100000013', NumMedia: '0' });
+
+    expect(kv.set).toHaveBeenCalledWith(expect.stringContaining('lang:'), 'fr');
+  });
+
+  // Onboarding: invalid choice repeats onboarding, does not save lang
+  test('user in onboarding with invalid choice receives onboarding again without saving lang', async () => {
+    const { kv } = require('@vercel/kv');
+    kv.get.mockImplementation(async (key) => {
+      if (key.startsWith('onboarding:')) return true;
+      return null;
+    });
+
+    await request(app)
+      .post('/api/webhook')
+      .type('form')
+      .send({ Body: 'xyz', From: 'whatsapp:+96100000014', NumMedia: '0' });
+
+    expect(kv.set).toHaveBeenCalledWith(
+      expect.stringContaining('onboarding:'),
+      true,
+      expect.any(Object)
+    );
+    expect(kv.set).not.toHaveBeenCalledWith(
+      expect.stringContaining('lang:'),
+      expect.anything()
+    );
+  });
+
+  // Universal "0" → menu in stored lang
+  test('known user sends "0" — receives menu in their stored lang', async () => {
+    const { kv } = require('@vercel/kv');
+    kv.get.mockImplementation(async (key) => {
+      if (key.startsWith('lang:')) return 'fr';
+      return null;
+    });
+
+    const messages = require('../../src/bot/messages');
+    const spy = jest.spyOn(messages, 't');
+
+    await request(app)
+      .post('/api/webhook')
+      .type('form')
+      .send({ Body: '0', From: 'whatsapp:+33300000001', NumMedia: '0' });
+
+    expect(spy).toHaveBeenCalledWith('MENU', 'fr');
+    spy.mockRestore();
+  });
+
+  // Universal "menu" → menu
+  test('known user sends "menu" — receives menu in stored lang', async () => {
+    const { kv } = require('@vercel/kv');
+    kv.get.mockImplementation(async (key) => {
+      if (key.startsWith('lang:')) return 'en';
+      return null;
+    });
+
+    const messages = require('../../src/bot/messages');
+    const spy = jest.spyOn(messages, 't');
+
+    await request(app)
+      .post('/api/webhook')
+      .type('form')
+      .send({ Body: 'menu', From: 'whatsapp:+44400000001', NumMedia: '0' });
+
+    expect(spy).toHaveBeenCalledWith('MENU', 'en');
+    spy.mockRestore();
+  });
+
+  // Universal "retour" → menu in French
+  test('known user sends "retour" — receives menu in stored lang', async () => {
+    const { kv } = require('@vercel/kv');
+    kv.get.mockImplementation(async (key) => {
+      if (key.startsWith('lang:')) return 'fr';
+      return null;
+    });
+
+    const messages = require('../../src/bot/messages');
+    const spy = jest.spyOn(messages, 't');
+
+    await request(app)
+      .post('/api/webhook')
+      .type('form')
+      .send({ Body: 'retour', From: 'whatsapp:+33300000002', NumMedia: '0' });
+
+    expect(spy).toHaveBeenCalledWith('MENU', 'fr');
+    spy.mockRestore();
+  });
+
+  // Universal "قائمة" → menu in Arabic
+  test('known user sends "قائمة" — receives menu in stored lang', async () => {
+    const { kv } = require('@vercel/kv');
+    kv.get.mockImplementation(async (key) => {
+      if (key.startsWith('lang:')) return 'ar';
+      return null;
+    });
+
+    const messages = require('../../src/bot/messages');
+    const spy = jest.spyOn(messages, 't');
+
+    await request(app)
+      .post('/api/webhook')
+      .type('form')
+      .send({ Body: 'قائمة', From: 'whatsapp:+96100000015', NumMedia: '0' });
+
+    expect(spy).toHaveBeenCalledWith('MENU', 'ar');
+    spy.mockRestore();
+  });
+
+  // Lang persistence: known user non-digit message updates stored lang in KV
+  test('known user: non-digit message updates lang:phoneHash in KV', async () => {
     cache.getFromCache.mockResolvedValue(null);
     sheets.fetchSheet.mockRejectedValue(new Error('down'));
     cache.getStaleOrNull.mockResolvedValue(null);
 
     const { kv } = require('@vercel/kv');
+    kv.get.mockImplementation(async (key) => {
+      if (key.startsWith('lang:')) return 'ar'; // known user
+      return null;
+    });
 
     await request(app)
       .post('/api/webhook')
@@ -208,13 +382,12 @@ describe('POST /api/webhook', () => {
 
     expect(kv.set).toHaveBeenCalledWith(
       expect.stringContaining('lang:'),
-      'fr',
-      expect.any(Object)
+      'fr'
     );
   });
 
-  // Lang persistence: digit message reads stored lang from KV
-  test('reads stored lang from KV when user sends a bare digit', async () => {
+  // Lang persistence: digit message reads stored lang from KV for known user
+  test('known user: digit message uses storedLang from KV (no re-detection)', async () => {
     cache.getFromCache.mockResolvedValue(null);
     sheets.fetchSheet.mockRejectedValue(new Error('down'));
     cache.getStaleOrNull.mockResolvedValue(null);
@@ -230,14 +403,14 @@ describe('POST /api/webhook', () => {
       .type('form')
       .send({ Body: '2', From: 'whatsapp:+33200000002', NumMedia: '0' });
 
+    // storedLang used directly — no new kv.set for lang:
     expect(kv.get).toHaveBeenCalledWith(expect.stringContaining('lang:'));
   });
 
-  // Lang persistence: digit with no stored lang defaults to 'ar'
-  test('defaults to ar when digit sent with no stored lang in KV', async () => {
-    cache.getFromCache.mockResolvedValue(null);
-    sheets.fetchSheet.mockRejectedValue(new Error('down'));
-    cache.getStaleOrNull.mockResolvedValue(null);
+  // New user sending a digit sees onboarding (not a feature response)
+  test('new user sending a digit receives onboarding, not a feature response', async () => {
+    const { kv } = require('@vercel/kv');
+    kv.get.mockResolvedValue(null); // no lang, no aid, no onboarding state
 
     const messages = require('../../src/bot/messages');
     const spy = jest.spyOn(messages, 't');
@@ -247,15 +420,21 @@ describe('POST /api/webhook', () => {
       .type('form')
       .send({ Body: '3', From: 'whatsapp:+96100000099', NumMedia: '0' });
 
-    expect(spy).toHaveBeenCalledWith('EMERGENCY_FALLBACK', 'ar');
+    expect(spy).toHaveBeenCalledWith('ONBOARDING', 'ar');
     spy.mockRestore();
   });
 
-  // Bug 1: emergency fallback when both cache and stale are unavailable
-  test('returns EMERGENCY_FALLBACK (not ERROR_SHEETS_DOWN) when cache and stale both unavailable', async () => {
+  // Bug 1: emergency fallback when both cache and stale are unavailable (known user)
+  test('known user: returns EMERGENCY_FALLBACK when cache and stale both unavailable', async () => {
     cache.getFromCache.mockResolvedValue(null);
     sheets.fetchSheet.mockRejectedValue(new Error('Sheets down'));
     cache.getStaleOrNull.mockResolvedValue(null);
+
+    const { kv } = require('@vercel/kv');
+    kv.get.mockImplementation(async (key) => {
+      if (key.startsWith('lang:')) return 'ar'; // known user
+      return null;
+    });
 
     const messages = require('../../src/bot/messages');
     const spy = jest.spyOn(messages, 't');

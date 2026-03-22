@@ -45,6 +45,23 @@ describe('t()', () => {
   });
 });
 
+describe('ONBOARDING', () => {
+  test('contains the trilingue language selection prompt', () => {
+    const msg = t('ONBOARDING', 'ar');
+    expect(msg).toContain('1️⃣');
+    expect(msg).toContain('2️⃣');
+    expect(msg).toContain('3️⃣');
+    expect(msg).toContain('العربية');
+    expect(msg).toContain('English');
+    expect(msg).toContain('Français');
+  });
+
+  test('same content regardless of lang parameter (intentionally trilingue)', () => {
+    expect(t('ONBOARDING', 'ar')).toBe(t('ONBOARDING', 'en'));
+    expect(t('ONBOARDING', 'en')).toBe(t('ONBOARDING', 'fr'));
+  });
+});
+
 describe('EMERGENCY_FALLBACK', () => {
   test('returns Arabic fallback containing Croix-Rouge (140) and Civil Defence (125)', () => {
     const msg = t('EMERGENCY_FALLBACK', 'ar');
