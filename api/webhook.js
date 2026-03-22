@@ -33,10 +33,11 @@ app.post('/api/webhook', async (req, res) => {
   }
 
   const twiml = new twilio.twiml.MessagingResponse();
+  let phoneHash = null;
 
   try {
     const parsed = parseTwilioBody(req.body);
-    const phoneHash = hashPhone(parsed.from);
+    phoneHash = hashPhone(parsed.from);
 
     // Bug 3 fix: universal commands always bypass rate limiting so users are never locked out.
     const BYPASS_RATE_LIMIT = new Set(['0', 'menu', 'قائمة', 'retour', 'reset', 'langue', 'language', 'لغة', 'english', 'français', 'francais']);
@@ -76,7 +77,8 @@ app.post('/api/webhook', async (req, res) => {
     return res.type('text/xml').send(twiml.toString());
   } catch (err) {
     console.error(sanitizeLogs(`Webhook error: ${err.message}`));
-    twiml.message(messages.t('ERROR_SHEETS_DOWN', 'en'));
+    const errLang = (await kv.get(`lang:${phoneHash}`).catch(() => null)) || 'ar';
+    twiml.message(messages.t('ERROR_SHEETS_DOWN', errLang));
     return res.type('text/xml').send(twiml.toString());
   }
 });

@@ -27,6 +27,7 @@ function parseNeeds(text, needMap) {
 async function handleAid({ phoneHash, text, lang = 'ar' }) {
   const stateKey = `aid:${phoneHash}`;
   const state = await kv.get(stateKey);
+  logger.info('aid_kv_state', { stateKey, state: JSON.stringify(state) });
 
   if (!state) {
     await kv.set(stateKey, { step: 'ask_name', lang }, { ex: STATE_TTL });
@@ -47,32 +48,37 @@ async function handleAid({ phoneHash, text, lang = 'ar' }) {
   }
 
   if (step === 'ask_need') {
-    const needMap = NEED_MAP[sessionLang] ?? NEED_MAP.ar;
-    const needs = parseNeeds(text, needMap);
-    const needLabel = needs.join(', ');
-    const ticket = generateTicket();
-    const now = new Date().toISOString();
+    try {
+      const needMap = NEED_MAP[sessionLang] ?? NEED_MAP.ar;
+      const needs = parseNeeds(text, needMap);
+      const needLabel = needs.join(', ');
+      const ticket = generateTicket();
+      const now = new Date().toISOString();
 
-    // Read lang:phoneHash (authoritative preference) — falls back to session lang
-    // if the key is missing (e.g. tests or legacy sessions).
-    const confirmedLang = (await kv.get(`lang:${phoneHash}`)) || sessionLang;
+      // Read lang:phoneHash (authoritative preference) — falls back to session lang
+      // if the key is missing (e.g. tests or legacy sessions).
+      const confirmedLang = (await kv.get(`lang:${phoneHash}`)) || sessionLang;
 
-    logger.info('aid_request_submitted', {
-      ticket,
-      phoneHash,
-      name,
-      zone,
-      need: needLabel,
-      lang: confirmedLang,
-      submitted_at: now,
-    });
+      logger.info('aid_request_submitted', {
+        ticket,
+        phoneHash,
+        name,
+        zone,
+        need: needLabel,
+        lang: confirmedLang,
+        submitted_at: now,
+      });
 
-    await kv.del(stateKey);
-    return {
-      reply: t('AID_CONFIRMED', confirmedLang, ticket),
-      notifyVolunteer: true,
-      ticketData: { ticket, name, zone, needType: needLabel },
-    };
+      await kv.del(stateKey);
+      return {
+        reply: t('AID_CONFIRMED', confirmedLang, ticket),
+        notifyVolunteer: true,
+        ticketData: { ticket, name, zone, needType: needLabel },
+      };
+    } catch (err) {
+      logger.error('aid_ask_need_failed', { error: err.message, stack: err.stack, phoneHash });
+      throw err;
+    }
   }
 
   await kv.set(stateKey, { step: 'ask_name', lang: sessionLang }, { ex: STATE_TTL });
