@@ -193,6 +193,112 @@ describe('POST /api/webhook', () => {
     expect(res.headers['content-type']).toContain('text/xml');
   });
 
+  // Bug 1: onboarding has absolute priority — "0" during onboarding repeats onboarding, not menu
+  test('Bug1: "0" during onboarding repeats onboarding instead of showing menu', async () => {
+    const { kv } = require('@vercel/kv');
+    kv.get.mockImplementation(async (key) => {
+      if (key.startsWith('onboarding:')) return true;
+      return null;
+    });
+
+    const messages = require('../../src/bot/messages');
+    const spy = jest.spyOn(messages, 't');
+
+    await request(app)
+      .post('/api/webhook')
+      .type('form')
+      .send({ Body: '0', From: 'whatsapp:+96100000030', NumMedia: '0' });
+
+    expect(spy).toHaveBeenCalledWith('ONBOARDING', 'ar');
+    expect(spy).not.toHaveBeenCalledWith('MENU', expect.any(String));
+    spy.mockRestore();
+  });
+
+  // Bug 2: rate limit message uses stored lang from KV, not detectLanguage
+  test('Bug2: rate limit message uses lang:phoneHash from KV, not detectLanguage', async () => {
+    const { kv } = require('@vercel/kv');
+    kv.get.mockImplementation(async (key) => {
+      if (key.startsWith('lang:')) return 'fr';
+      return null;
+    });
+    rateLimiter.checkRateLimit.mockResolvedValue({ allowed: false });
+
+    const messages = require('../../src/bot/messages');
+    const spy = jest.spyOn(messages, 't');
+
+    await request(app)
+      .post('/api/webhook')
+      .type('form')
+      .send({ Body: '1', From: 'whatsapp:+33600000001', NumMedia: '0' });
+
+    expect(spy).toHaveBeenCalledWith('RATE_LIMITED', 'fr');
+    spy.mockRestore();
+  });
+
+  // Bug 2: rate limit defaults to 'ar' when no stored lang
+  test('Bug2: rate limit defaults to ar when no stored lang in KV', async () => {
+    const { kv } = require('@vercel/kv');
+    kv.get.mockResolvedValue(null);
+    rateLimiter.checkRateLimit.mockResolvedValue({ allowed: false });
+
+    const messages = require('../../src/bot/messages');
+    const spy = jest.spyOn(messages, 't');
+
+    await request(app)
+      .post('/api/webhook')
+      .type('form')
+      .send({ Body: 'hello', From: 'whatsapp:+44600000000', NumMedia: '0' });
+
+    expect(spy).toHaveBeenCalledWith('RATE_LIMITED', 'ar');
+    spy.mockRestore();
+  });
+
+  // Bug 3: universal command "0" bypasses rate limit
+  test('Bug3: "0" bypasses rate limit and shows menu', async () => {
+    rateLimiter.checkRateLimit.mockResolvedValue({ allowed: false });
+
+    const { kv } = require('@vercel/kv');
+    kv.get.mockImplementation(async (key) => {
+      if (key.startsWith('lang:')) return 'en';
+      return null;
+    });
+
+    const messages = require('../../src/bot/messages');
+    const spy = jest.spyOn(messages, 't');
+
+    await request(app)
+      .post('/api/webhook')
+      .type('form')
+      .send({ Body: '0', From: 'whatsapp:+44600000001', NumMedia: '0' });
+
+    expect(spy).not.toHaveBeenCalledWith('RATE_LIMITED', expect.any(String));
+    expect(spy).toHaveBeenCalledWith('MENU', 'en');
+    spy.mockRestore();
+  });
+
+  // Bug 3: universal command "langue" bypasses rate limit
+  test('Bug3: "langue" bypasses rate limit and relaunches onboarding', async () => {
+    rateLimiter.checkRateLimit.mockResolvedValue({ allowed: false });
+
+    const { kv } = require('@vercel/kv');
+    kv.get.mockImplementation(async (key) => {
+      if (key.startsWith('lang:')) return 'fr';
+      return null;
+    });
+
+    const messages = require('../../src/bot/messages');
+    const spy = jest.spyOn(messages, 't');
+
+    await request(app)
+      .post('/api/webhook')
+      .type('form')
+      .send({ Body: 'langue', From: 'whatsapp:+33600000002', NumMedia: '0' });
+
+    expect(spy).not.toHaveBeenCalledWith('RATE_LIMITED', expect.any(String));
+    expect(spy).toHaveBeenCalledWith('ONBOARDING', 'ar');
+    spy.mockRestore();
+  });
+
   // Bug 2: "English" → saves lang:en and shows English menu
   test('"English" command saves lang:en and shows menu without requiring prior onboarding', async () => {
     const { kv } = require('@vercel/kv');

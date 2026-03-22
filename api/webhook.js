@@ -38,10 +38,15 @@ app.post('/api/webhook', async (req, res) => {
     const parsed = parseTwilioBody(req.body);
     const phoneHash = hashPhone(parsed.from);
 
+    // Bug 3 fix: universal commands always bypass rate limiting so users are never locked out.
+    const BYPASS_RATE_LIMIT = new Set(['0', 'menu', 'قائمة', 'retour', 'reset', 'langue', 'language', 'لغة', 'english', 'français', 'francais']);
+    const trimmedLower = (parsed.text || '').trim().toLowerCase();
+
     // Rate limit
     const rateCheck = await checkRateLimit(phoneHash);
-    if (!rateCheck.allowed) {
-      const lang = detectLanguage(parsed.text);
+    if (!rateCheck.allowed && !BYPASS_RATE_LIMIT.has(trimmedLower)) {
+      // Bug 2 fix: use stored lang (not detectLanguage) for the rate-limit message.
+      const lang = (await kv.get(`lang:${phoneHash}`)) || 'ar';
       twiml.message(messages.t('RATE_LIMITED', lang));
       return res.type('text/xml').send(twiml.toString());
     }
@@ -81,6 +86,24 @@ async function _processIntentInner(text, phoneHash, location) {
   const trimmed = text.trim();
   const lower = trimmed.toLowerCase();
 
+  // 0. Onboarding has ABSOLUTE priority — checked before universal triggers so that
+  //    "1/2/3" during onboarding are always language selections, not menu inputs.
+  const onboarding = await kv.get(`onboarding:${phoneHash}`);
+  if (onboarding) {
+    const langMap = { '1': 'ar', '2': 'en', '3': 'fr' };
+    const chosen = langMap[trimmed];
+    if (chosen) {
+      await Promise.all([
+        kv.set(`lang:${phoneHash}`, chosen), // no TTL — permanent preference
+        kv.del(`onboarding:${phoneHash}`),
+      ]);
+      return [messages.t('MENU', chosen), chosen];
+    }
+    // Any other input during onboarding (including "0") → repeat onboarding
+    await kv.set(`onboarding:${phoneHash}`, true, { ex: 3600 });
+    return [messages.t('ONBOARDING', 'ar'), null];
+  }
+
   // 1. Universal menu/cancel triggers — escape any flow in any language.
   if (['0', 'menu', 'قائمة', 'retour'].includes(lower)) {
     const lang = (await kv.get(`lang:${phoneHash}`)) || 'ar';
@@ -115,23 +138,6 @@ async function _processIntentInner(text, phoneHash, location) {
       kv.del(`onboarding:${phoneHash}`),
       kv.del(`aid:${phoneHash}`),
     ]).catch(() => {});
-    return [messages.t('ONBOARDING', 'ar'), null];
-  }
-
-  // 5. Onboarding state — checked BEFORE lang and aid so "1/2/3" are lang selections.
-  const onboarding = await kv.get(`onboarding:${phoneHash}`);
-  if (onboarding) {
-    const langMap = { '1': 'ar', '2': 'en', '3': 'fr' };
-    const chosen = langMap[trimmed];
-    if (chosen) {
-      await Promise.all([
-        kv.set(`lang:${phoneHash}`, chosen), // no TTL — permanent preference
-        kv.del(`onboarding:${phoneHash}`),
-      ]);
-      return [messages.t('MENU', chosen), chosen];
-    }
-    // Invalid choice — repeat onboarding
-    await kv.set(`onboarding:${phoneHash}`, true, { ex: 3600 });
     return [messages.t('ONBOARDING', 'ar'), null];
   }
 
