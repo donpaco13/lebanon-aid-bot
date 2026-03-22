@@ -10,8 +10,5 @@
   },
   "routes": [
     { "src": "/api/health", "dest": "/api/health.js" }
-  ],
-  "crons": [
-    { "path": "/api/cron/scrape", "schedule": "*/30 * * * *" }
   ]
 }
