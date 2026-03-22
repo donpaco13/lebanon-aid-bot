@@ -76,19 +76,66 @@ app.post('/api/webhook', async (req, res) => {
   }
 });
 
-async function processIntent(text, phoneHash, location) {
+// Returns [responseText, lang] — lang is null for ONBOARDING (no footer shown).
+async function _processIntentInner(text, phoneHash, location) {
   const trimmed = text.trim();
   const lower = trimmed.toLowerCase();
 
-  // Universal menu/cancel triggers — work in any state, any language.
-  // Checked first so "0"/"retour" always escape any flow.
+  // 1. Universal menu/cancel triggers — escape any flow in any language.
   if (['0', 'menu', 'قائمة', 'retour'].includes(lower)) {
     const lang = (await kv.get(`lang:${phoneHash}`)) || 'ar';
     await kv.del(`aid:${phoneHash}`).catch(() => {});
-    return messages.t('MENU', lang);
+    return [messages.t('MENU', lang), lang];
   }
 
-  // Active aid flow — free-text replies (name, zone, need) must not be misrouted.
+  // 2. Direct language switch — works from any state, no onboarding required.
+  const LANG_SWITCH = { english: 'en', 'français': 'fr', francais: 'fr' };
+  if (LANG_SWITCH[lower]) {
+    const lang = LANG_SWITCH[lower];
+    await kv.set(`lang:${phoneHash}`, lang);
+    await kv.del(`aid:${phoneHash}`).catch(() => {});
+    return [messages.t('MENU', lang), lang];
+  }
+
+  // 3. Language reset — relaunches trilingue onboarding and clears stored lang.
+  if (['langue', 'language', 'لغة'].includes(lower)) {
+    await Promise.all([
+      kv.del(`lang:${phoneHash}`),
+      kv.del(`onboarding:${phoneHash}`),
+      kv.del(`aid:${phoneHash}`),
+    ]).catch(() => {});
+    await kv.set(`onboarding:${phoneHash}`, true, { ex: 3600 });
+    return [messages.t('ONBOARDING', 'ar'), null];
+  }
+
+  // 4. Dev reset — clears all state to retest onboarding from scratch.
+  if (lower === 'reset') {
+    await Promise.all([
+      kv.del(`lang:${phoneHash}`),
+      kv.del(`onboarding:${phoneHash}`),
+      kv.del(`aid:${phoneHash}`),
+    ]).catch(() => {});
+    return [messages.t('ONBOARDING', 'ar'), null];
+  }
+
+  // 5. Onboarding state — checked BEFORE lang and aid so "1/2/3" are lang selections.
+  const onboarding = await kv.get(`onboarding:${phoneHash}`);
+  if (onboarding) {
+    const langMap = { '1': 'ar', '2': 'en', '3': 'fr' };
+    const chosen = langMap[trimmed];
+    if (chosen) {
+      await Promise.all([
+        kv.set(`lang:${phoneHash}`, chosen), // no TTL — permanent preference
+        kv.del(`onboarding:${phoneHash}`),
+      ]);
+      return [messages.t('MENU', chosen), chosen];
+    }
+    // Invalid choice — repeat onboarding
+    await kv.set(`onboarding:${phoneHash}`, true, { ex: 3600 });
+    return [messages.t('ONBOARDING', 'ar'), null];
+  }
+
+  // 6. Active aid flow — free-text (name, zone, need) must not be misrouted.
   const aidState = await kv.get(`aid:${phoneHash}`);
   if (aidState) {
     const sessionLang = aidState.lang || 'ar';
@@ -101,34 +148,21 @@ async function processIntent(text, phoneHash, location) {
         need: result.ticketData.needType || '',
       }).catch(() => {});
     }
-    return result.reply;
+    return [result.reply, sessionLang];
   }
 
-  // Onboarding — new users have no stored lang.
+  // 7. New user — no stored lang → start onboarding.
   const storedLang = await kv.get(`lang:${phoneHash}`);
-  if (storedLang === null) {
-    const onboarding = await kv.get(`onboarding:${phoneHash}`);
-    if (onboarding) {
-      const langMap = { '1': 'ar', '2': 'en', '3': 'fr' };
-      const chosen = langMap[trimmed];
-      if (chosen) {
-        await Promise.all([
-          kv.set(`lang:${phoneHash}`, chosen), // no TTL — permanent preference
-          kv.del(`onboarding:${phoneHash}`),
-        ]);
-        return messages.t('MENU', chosen);
-      }
-    }
-    // New user or invalid choice — show trilingue onboarding
+  if (storedLang == null) {
     await kv.set(`onboarding:${phoneHash}`, true, { ex: 3600 });
-    return messages.t('ONBOARDING', 'ar');
+    return [messages.t('ONBOARDING', 'ar'), null];
   }
 
-  // Known user — resolve effective lang for this message.
+  // 8. Known user — resolve effective lang and route to feature.
   const DIGIT_ONLY = /^[1-5]$/.test(trimmed);
   let lang;
   if (DIGIT_ONLY) {
-    lang = storedLang; // already fetched above
+    lang = storedLang;
   } else {
     lang = detectLanguage(text);
     kv.set(`lang:${phoneHash}`, lang).catch(() => {});
@@ -139,27 +173,27 @@ async function processIntent(text, phoneHash, location) {
   switch (intent) {
     case 'shelter': {
       const result = await handleShelter({ zone, location });
-      if (result.error) return messages.t('EMERGENCY_FALLBACK', lang);
-      if (result.shelters.length === 0) return messages.t('NO_RESULTS', lang);
+      if (result.error) return [messages.t('EMERGENCY_FALLBACK', lang), lang];
+      if (result.shelters.length === 0) return [messages.t('NO_RESULTS', lang), lang];
       let msg = result.shelters.map(s => messages.formatShelterResult(s, s.distance, lang)).join('\n\n');
       if (result.stale) msg = messages.formatStaleWarning(result.cachedAt, lang) + '\n\n' + msg;
-      return msg;
+      return [msg, lang];
     }
     case 'evacuation': {
       const result = await handleEvacuation({ zone });
-      if (result.error) return messages.t('EMERGENCY_FALLBACK', lang);
-      if (result.evacuations.length === 0) return zone ? messages.t('NO_RESULTS', lang) : messages.t('NO_EVACUATIONS', lang);
+      if (result.error) return [messages.t('EMERGENCY_FALLBACK', lang), lang];
+      if (result.evacuations.length === 0) return [zone ? messages.t('NO_RESULTS', lang) : messages.t('NO_EVACUATIONS', lang), lang];
       let msg = result.evacuations.map(e => messages.formatEvacuationResult(e, lang)).join('\n\n');
       if (result.stale) msg = messages.formatStaleWarning(result.cachedAt, lang) + '\n\n' + msg;
-      return msg;
+      return [msg, lang];
     }
     case 'medical': {
       const result = await handleMedical({ zone, location });
-      if (result.error) return messages.t('EMERGENCY_FALLBACK', lang);
-      if (result.facilities.length === 0) return messages.t('NO_RESULTS', lang);
+      if (result.error) return [messages.t('EMERGENCY_FALLBACK', lang), lang];
+      if (result.facilities.length === 0) return [messages.t('NO_RESULTS', lang), lang];
       let msg = result.facilities.map(f => messages.formatMedicalResult(f, f.distance, lang)).join('\n\n');
       if (result.stale) msg = messages.formatStaleWarning(result.cachedAt, lang) + '\n\n' + msg;
-      return msg;
+      return [msg, lang];
     }
     case 'aid': {
       const result = await handleAid({ phoneHash, text, lang });
@@ -171,16 +205,23 @@ async function processIntent(text, phoneHash, location) {
           need: result.ticketData.needType || '',
         }).catch(() => {});
       }
-      return result.reply;
+      return [result.reply, lang];
     }
     case 'registration': {
       const result = await handleRegistration();
-      if (result.error) return messages.t('EMERGENCY_FALLBACK', lang);
-      return result.steps.map(s => messages.formatRegistrationStep(s, lang)).join('\n\n');
+      if (result.error) return [messages.t('EMERGENCY_FALLBACK', lang), lang];
+      return [result.steps.map(s => messages.formatRegistrationStep(s, lang)).join('\n\n'), lang];
     }
     default:
-      return messages.t('MENU', lang);
+      return [messages.t('MENU', lang), lang];
   }
+}
+
+// Appends NAV_FOOTER to all responses except ONBOARDING (lang === null).
+async function processIntent(text, phoneHash, location) {
+  const [response, lang] = await _processIntentInner(text, phoneHash, location);
+  if (!lang) return response;
+  return response + '\n\n' + messages.t('NAV_FOOTER', lang);
 }
 
 module.exports = app;

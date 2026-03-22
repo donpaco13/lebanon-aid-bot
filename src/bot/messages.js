@@ -12,7 +12,11 @@ const STRINGS = {
 4️⃣ طلب مساعدة (أكل، فرشات، دوا)
 5️⃣ تسجيل كنازح
 
-أو ابعتلي موقعك 📍 لألاقيلك أقرب ملجأ.`,
+أو ابعتلي موقعك 📍 لألاقيلك أقرب ملجأ.
+─────
+ℹ️ المعلومات تتحدّث كل 30 دقيقة
+🆘 خطر فوري: 140 أو 125
+0️⃣ هذه القائمة في أي وقت`,
     en: `Hello 👋
 I'm a humanitarian aid bot for displaced people in Lebanon.
 Send a number or voice message:
@@ -23,7 +27,11 @@ Send a number or voice message:
 4️⃣ Request aid (food, blankets, medicine)
 5️⃣ Register as displaced
 
-Or send your location 📍 to find the nearest shelter.`,
+Or send your location 📍 to find the nearest shelter.
+─────
+ℹ️ Data updated every 30 minutes
+🆘 Immediate danger: 140 or 125
+0️⃣ This menu anytime`,
     fr: `Bonjour 👋
 Je suis un bot d'aide humanitaire pour les déplacés au Liban.
 Envoyez un numéro ou un message vocal :
@@ -34,7 +42,11 @@ Envoyez un numéro ou un message vocal :
 4️⃣ Demander de l'aide (nourriture, couvertures, médicaments)
 5️⃣ S'enregistrer comme déplacé
 
-Ou envoyez votre position 📍 pour trouver l'abri le plus proche.`,
+Ou envoyez votre position 📍 pour trouver l'abri le plus proche.
+─────
+ℹ️ Données mises à jour toutes les 30 min
+🆘 Danger immédiat : 140 ou 125
+0️⃣ Ce menu à tout moment`,
   },
   VOICE_RECEIVED: {
     ar: 'بعتلي صوت، عم بسمعو... 🎧',
@@ -92,6 +104,11 @@ Ou envoyez votre position 📍 pour trouver l'abri le plus proche.`,
     ar: (ticket) => `✅ تم تسجيل طلبك — رقم التذكرة: ${ticket}\nرح يتواصل معك متطوع بأقرب وقت.`,
     en: (ticket) => `✅ Your request has been registered — ticket: ${ticket}\nA volunteer will contact you shortly.`,
     fr: (ticket) => `✅ Votre demande a été enregistrée — ticket : ${ticket}\nUn bénévole vous contactera dès que possible.`,
+  },
+  NAV_FOOTER: {
+    ar: `─────\n0️⃣ القائمة في أي وقت\n🌐 تغيير اللغة: "لغة"`,
+    en: `─────\n0️⃣ Main menu anytime\n🌐 Change language: "language"`,
+    fr: `─────\n0️⃣ Menu principal à tout moment\n🌐 Changer de langue : "langue"`,
   },
   ONBOARDING: (() => {
     const msg = `مرحباً 🇱🇧 اختر لغتك:

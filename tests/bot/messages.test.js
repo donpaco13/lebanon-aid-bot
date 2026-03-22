@@ -45,6 +45,43 @@ describe('t()', () => {
   });
 });
 
+describe('NAV_FOOTER', () => {
+  test('Arabic footer contains 0 and langue hint', () => {
+    const msg = t('NAV_FOOTER', 'ar');
+    expect(msg).toContain('0️⃣');
+    expect(msg).toContain('─────');
+  });
+
+  test('English footer mentions menu and language', () => {
+    const msg = t('NAV_FOOTER', 'en');
+    expect(msg).toContain('0️⃣');
+    expect(msg).toContain('language');
+  });
+
+  test('French footer mentions menu and langue', () => {
+    const msg = t('NAV_FOOTER', 'fr');
+    expect(msg).toContain('0️⃣');
+    expect(msg).toContain('langue');
+  });
+});
+
+describe('MENU enrichi', () => {
+  test('Arabic menu contains emergency numbers', () => {
+    expect(t('MENU', 'ar')).toContain('140');
+    expect(t('MENU', 'ar')).toContain('125');
+  });
+
+  test('English menu contains emergency numbers', () => {
+    expect(t('MENU', 'en')).toContain('140');
+    expect(t('MENU', 'en')).toContain('125');
+  });
+
+  test('French menu contains emergency numbers', () => {
+    expect(t('MENU', 'fr')).toContain('140');
+    expect(t('MENU', 'fr')).toContain('125');
+  });
+});
+
 describe('ONBOARDING', () => {
   test('contains the trilingue language selection prompt', () => {
     const msg = t('ONBOARDING', 'ar');

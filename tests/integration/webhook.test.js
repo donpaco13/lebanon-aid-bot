@@ -193,6 +193,131 @@ describe('POST /api/webhook', () => {
     expect(res.headers['content-type']).toContain('text/xml');
   });
 
+  // Bug 2: "English" → saves lang:en and shows English menu
+  test('"English" command saves lang:en and shows menu without requiring prior onboarding', async () => {
+    const { kv } = require('@vercel/kv');
+    kv.get.mockResolvedValue(null);
+
+    await request(app)
+      .post('/api/webhook')
+      .type('form')
+      .send({ Body: 'English', From: 'whatsapp:+44500000001', NumMedia: '0' });
+
+    expect(kv.set).toHaveBeenCalledWith(expect.stringContaining('lang:'), 'en');
+  });
+
+  // Bug 2: "Français" → saves lang:fr
+  test('"Français" command saves lang:fr', async () => {
+    const { kv } = require('@vercel/kv');
+    kv.get.mockResolvedValue(null);
+
+    await request(app)
+      .post('/api/webhook')
+      .type('form')
+      .send({ Body: 'Français', From: 'whatsapp:+33500000001', NumMedia: '0' });
+
+    expect(kv.set).toHaveBeenCalledWith(expect.stringContaining('lang:'), 'fr');
+  });
+
+  // Bug 2: "langue" → clears lang, shows onboarding
+  test('"langue" command clears stored lang and relaunches onboarding', async () => {
+    const { kv } = require('@vercel/kv');
+    kv.get.mockImplementation(async (key) => {
+      if (key.startsWith('lang:')) return 'fr';
+      return null;
+    });
+
+    const messages = require('../../src/bot/messages');
+    const spy = jest.spyOn(messages, 't');
+
+    await request(app)
+      .post('/api/webhook')
+      .type('form')
+      .send({ Body: 'langue', From: 'whatsapp:+33500000002', NumMedia: '0' });
+
+    expect(kv.del).toHaveBeenCalledWith(expect.stringContaining('lang:'));
+    expect(spy).toHaveBeenCalledWith('ONBOARDING', 'ar');
+    spy.mockRestore();
+  });
+
+  // Bug 2: "language" (English variant) → relaunches onboarding
+  test('"language" command relaunches onboarding', async () => {
+    const { kv } = require('@vercel/kv');
+    kv.get.mockImplementation(async (key) => {
+      if (key.startsWith('lang:')) return 'en';
+      return null;
+    });
+
+    const messages = require('../../src/bot/messages');
+    const spy = jest.spyOn(messages, 't');
+
+    await request(app)
+      .post('/api/webhook')
+      .type('form')
+      .send({ Body: 'language', From: 'whatsapp:+44500000002', NumMedia: '0' });
+
+    expect(spy).toHaveBeenCalledWith('ONBOARDING', 'ar');
+    spy.mockRestore();
+  });
+
+  // Bug 3: "reset" → clears both keys and shows onboarding
+  test('"reset" command clears lang and onboarding KV keys', async () => {
+    const { kv } = require('@vercel/kv');
+    kv.get.mockImplementation(async (key) => {
+      if (key.startsWith('lang:')) return 'ar';
+      return null;
+    });
+
+    const messages = require('../../src/bot/messages');
+    const spy = jest.spyOn(messages, 't');
+
+    await request(app)
+      .post('/api/webhook')
+      .type('form')
+      .send({ Body: 'reset', From: 'whatsapp:+96100000020', NumMedia: '0' });
+
+    expect(kv.del).toHaveBeenCalledWith(expect.stringContaining('lang:'));
+    expect(spy).toHaveBeenCalledWith('ONBOARDING', 'ar');
+    spy.mockRestore();
+  });
+
+  // UX footer: known user response contains NAV_FOOTER
+  test('known user response includes NAV_FOOTER appended after main content', async () => {
+    const { kv } = require('@vercel/kv');
+    kv.get.mockImplementation(async (key) => {
+      if (key.startsWith('lang:')) return 'en';
+      return null;
+    });
+
+    const messages = require('../../src/bot/messages');
+    const spy = jest.spyOn(messages, 't');
+
+    await request(app)
+      .post('/api/webhook')
+      .type('form')
+      .send({ Body: 'help', From: 'whatsapp:+44500000010', NumMedia: '0' });
+
+    expect(spy).toHaveBeenCalledWith('NAV_FOOTER', 'en');
+    spy.mockRestore();
+  });
+
+  // UX footer: onboarding response does NOT include NAV_FOOTER
+  test('onboarding response does not include NAV_FOOTER', async () => {
+    const { kv } = require('@vercel/kv');
+    kv.get.mockResolvedValue(null);
+
+    const messages = require('../../src/bot/messages');
+    const spy = jest.spyOn(messages, 't');
+
+    await request(app)
+      .post('/api/webhook')
+      .type('form')
+      .send({ Body: 'مرحبا', From: 'whatsapp:+96100000021', NumMedia: '0' });
+
+    expect(spy).not.toHaveBeenCalledWith('NAV_FOOTER', expect.any(String));
+    spy.mockRestore();
+  });
+
   // Onboarding: new user (no lang in KV) receives trilingue onboarding
   test('new user with no stored lang receives onboarding and sets onboarding state in KV', async () => {
     const { kv } = require('@vercel/kv');
