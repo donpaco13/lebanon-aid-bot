@@ -29,10 +29,12 @@ async function handleShelter({ zone, location }) {
         cachedAt = staleData.cachedAt;
         stale = true;
       } else {
-        return { shelters: [], stale: false, error: true };
+        return { shelters: [], stale: false, error: 'network' };
       }
     }
   }
+
+  if (data.length === 0) return { shelters: [], stale: false, error: 'sheets_empty' };
 
   // Filter open shelters only
   let shelters = data.filter(s => s.status === 'open');

@@ -30,6 +30,8 @@ async function handleRegistration() {
     }
   }
 
+  if (data.length === 0) return { steps: [], stale: false, error: 'sheets_empty' };
+
   return { steps: data, stale, cachedAt };
 }
 

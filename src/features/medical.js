@@ -27,10 +27,12 @@ async function handleMedical({ zone, location }) {
         cachedAt = staleData.cachedAt;
         stale = true;
       } else {
-        return { facilities: [], stale: false, error: true };
+        return { facilities: [], stale: false, error: 'network' };
       }
     }
   }
+
+  if (data.length === 0) return { facilities: [], stale: false, error: 'sheets_empty' };
 
   // Filter to active statuses only
   let facilities = data.filter(f => ACTIVE_STATUSES.includes(f.status));

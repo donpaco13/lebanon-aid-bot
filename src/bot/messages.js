@@ -155,6 +155,11 @@ Bonjour 🇫🇷 Choisissez votre langue:
 💊 Médicaments maladies graves (MoPH) : 1214
 🧠 Prévention suicide / détresse psychologique : 1564`,
   },
+  DATA_LOADING: {
+    ar: '🔄 المعلومات عم تتحمّل. جرّب بعد شوي أو ابعتلي موقعك 📍',
+    en: '🔄 Data is being loaded. Try again shortly or send your location 📍',
+    fr: '🔄 Les données sont en cours de chargement. Réessayez ou envoyez votre position 📍',
+  },
   RATE_LIMITED: {
     ar: '⚠️ عم تبعت كتير رسائل. استنى شوي وجرّب بعدين.',
     en: '⚠️ You are sending too many messages. Please wait a moment and try again.',

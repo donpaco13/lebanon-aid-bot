@@ -29,7 +29,7 @@ function parseTwilioBody(body) {
     : null;
 
   return {
-    text: (body.Body || '').trim(),
+    text: (body.Body || '').replace(/[\u200B-\u200D\uFEFF\s]+/g, ' ').trim(),
     from: body.From || '',
     hasMedia,
     mediaType: hasMedia ? body.MediaContentType0 : null,

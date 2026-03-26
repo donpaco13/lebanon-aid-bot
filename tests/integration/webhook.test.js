@@ -235,8 +235,8 @@ describe('POST /api/webhook', () => {
     spy.mockRestore();
   });
 
-  // Bug 2: rate limit defaults to 'ar' when no stored lang
-  test('Bug2: rate limit defaults to ar when no stored lang in KV', async () => {
+  // Bug 2: rate limit shows ar+en bilingual when no stored lang
+  test('Bug2: rate limit shows ar AND en when no stored lang in KV', async () => {
     const { kv } = require('@vercel/kv');
     kv.get.mockResolvedValue(null);
     rateLimiter.checkRateLimit.mockResolvedValue({ allowed: false });
@@ -250,6 +250,7 @@ describe('POST /api/webhook', () => {
       .send({ Body: 'hello', From: 'whatsapp:+44600000000', NumMedia: '0' });
 
     expect(spy).toHaveBeenCalledWith('RATE_LIMITED', 'ar');
+    expect(spy).toHaveBeenCalledWith('RATE_LIMITED', 'en');
     spy.mockRestore();
   });
 

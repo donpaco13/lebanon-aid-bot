@@ -25,10 +25,12 @@ async function handleEvacuation({ zone }) {
         cachedAt = staleData.cachedAt;
         stale = true;
       } else {
-        return { evacuations: [], stale: false, error: true };
+        return { evacuations: [], stale: false, error: 'network' };
       }
     }
   }
+
+  if (data.length === 0) return { evacuations: [], stale: false, error: 'sheets_empty' };
 
   let evacuations;
   if (zone) {

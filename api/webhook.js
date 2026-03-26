@@ -46,9 +46,11 @@ app.post('/api/webhook', async (req, res) => {
     // Rate limit
     const rateCheck = await checkRateLimit(phoneHash);
     if (!rateCheck.allowed && !BYPASS_RATE_LIMIT.has(trimmedLower)) {
-      // Bug 2 fix: use stored lang (not detectLanguage) for the rate-limit message.
-      const lang = (await kv.get(`lang:${phoneHash}`).catch(() => null)) || 'ar';
-      twiml.message(messages.t('RATE_LIMITED', lang));
+      const storedLang = await kv.get(`lang:${phoneHash}`).catch(() => null);
+      const rateLimitMsg = storedLang
+        ? messages.t('RATE_LIMITED', storedLang)
+        : messages.t('RATE_LIMITED', 'ar') + '\n\n' + messages.t('RATE_LIMITED', 'en');
+      twiml.message(rateLimitMsg);
       return res.type('text/xml').send(twiml.toString());
     }
 
@@ -85,7 +87,7 @@ app.post('/api/webhook', async (req, res) => {
 
 // Returns [responseText, lang] — lang is null for ONBOARDING (no footer shown).
 async function _processIntentInner(text, phoneHash, location) {
-  const trimmed = text.trim();
+  const trimmed = (text || '').replace(/[\u200B-\u200D\uFEFF\s]+/g, ' ').trim();
   const lower = trimmed.toLowerCase();
 
   // 0. Onboarding has ABSOLUTE priority — checked before universal triggers so that
@@ -181,6 +183,7 @@ async function _processIntentInner(text, phoneHash, location) {
   switch (intent) {
     case 'shelter': {
       const result = await handleShelter({ zone, location });
+      if (result.error === 'sheets_empty' || result.error === 'no_data') return [messages.t('DATA_LOADING', lang), lang];
       if (result.error) return [messages.t('EMERGENCY_FALLBACK', lang), lang];
       if (result.shelters.length === 0) return [messages.t('NO_RESULTS', lang), lang];
       let msg = result.shelters.map(s => messages.formatShelterResult(s, s.distance, lang)).join('\n\n');
@@ -189,6 +192,7 @@ async function _processIntentInner(text, phoneHash, location) {
     }
     case 'evacuation': {
       const result = await handleEvacuation({ zone });
+      if (result.error === 'sheets_empty' || result.error === 'no_data') return [messages.t('DATA_LOADING', lang), lang];
       if (result.error) return [messages.t('EMERGENCY_FALLBACK', lang), lang];
       if (result.evacuations.length === 0) return [zone ? messages.t('NO_RESULTS', lang) : messages.t('NO_EVACUATIONS', lang), lang];
       let msg = result.evacuations.map(e => messages.formatEvacuationResult(e, lang)).join('\n\n');
@@ -197,6 +201,7 @@ async function _processIntentInner(text, phoneHash, location) {
     }
     case 'medical': {
       const result = await handleMedical({ zone, location });
+      if (result.error === 'sheets_empty' || result.error === 'no_data') return [messages.t('DATA_LOADING', lang), lang];
       if (result.error) return [messages.t('EMERGENCY_FALLBACK', lang), lang];
       if (result.facilities.length === 0) return [messages.t('NO_RESULTS', lang), lang];
       let msg = result.facilities.map(f => messages.formatMedicalResult(f, f.distance, lang)).join('\n\n');
@@ -217,6 +222,7 @@ async function _processIntentInner(text, phoneHash, location) {
     }
     case 'registration': {
       const result = await handleRegistration();
+      if (result.error === 'sheets_empty' || result.error === 'no_data') return [messages.t('DATA_LOADING', lang), lang];
       if (result.error) return [messages.t('EMERGENCY_FALLBACK', lang), lang];
       return [result.steps.map(s => messages.formatRegistrationStep(s, lang)).join('\n\n'), lang];
     }
