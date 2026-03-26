@@ -15,8 +15,13 @@ jest.mock('../../src/utils/logger', () => ({
   error: jest.fn(),
 }));
 
+jest.mock('../../src/services/sheets', () => ({
+  appendRow: jest.fn(),
+}));
+
 const { kv } = require('@vercel/kv');
 const logger = require('../../src/utils/logger');
+const sheets = require('../../src/services/sheets');
 
 const PHONE_HASH = 'abc123';
 
@@ -122,21 +127,38 @@ describe('handleAid', () => {
     expect(result.reply).toContain('registered'); // English confirmation
   });
 
-  // --- No external service call ---
+  // --- Google Sheets persistence ---
 
-  test('does not call sheets — logs locally instead', async () => {
+  test('persists aid request to sheets on submission', async () => {
     kv.get
       .mockResolvedValueOnce({ step: 'ask_need', name: 'Ahmad', zone: 'Hamra', lang: 'ar' })
       .mockResolvedValueOnce('ar');
     kv.del.mockResolvedValue();
+    sheets.appendRow.mockResolvedValue();
 
     await handleAid({ phoneHash: PHONE_HASH, text: '1' });
 
-    expect(logger.info).toHaveBeenCalledWith('aid_request_submitted', expect.objectContaining({
+    expect(sheets.appendRow).toHaveBeenCalledWith('aid_requests', expect.objectContaining({
       name: 'Ahmad',
       zone: 'Hamra',
       need: 'أكل',
+      phone: PHONE_HASH,
       lang: 'ar',
+    }));
+  });
+
+  test('sheets error does not crash the flow — logs and returns confirmation', async () => {
+    kv.get
+      .mockResolvedValueOnce({ step: 'ask_need', name: 'Ahmad', zone: 'Hamra', lang: 'ar' })
+      .mockResolvedValueOnce('ar');
+    kv.del.mockResolvedValue();
+    sheets.appendRow.mockRejectedValue(new Error('Sheets unavailable'));
+
+    const result = await handleAid({ phoneHash: PHONE_HASH, text: '1' });
+
+    expect(result.reply).toContain('✅');
+    expect(logger.error).toHaveBeenCalledWith('aid_sheets_write_failed', expect.objectContaining({
+      error: 'Sheets unavailable',
     }));
   });
 

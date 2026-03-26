@@ -2,6 +2,7 @@
 const { kv } = require('@vercel/kv');
 const { t } = require('../bot/messages');
 const logger = require('../utils/logger');
+const sheets = require('../services/sheets');
 
 const STATE_TTL = 600;
 
@@ -68,6 +69,20 @@ async function handleAid({ phoneHash, text, lang = 'ar' }) {
         lang: confirmedLang,
         submitted_at: now,
       });
+
+      try {
+        await sheets.appendRow('aid_requests', {
+          ticket,
+          name,
+          zone,
+          need: needLabel,
+          phone: phoneHash,
+          lang: confirmedLang,
+          submitted_at: now,
+        });
+      } catch (sheetsErr) {
+        logger.error('aid_sheets_write_failed', { error: sheetsErr.message, ticket, phoneHash });
+      }
 
       await kv.del(stateKey);
       return {
