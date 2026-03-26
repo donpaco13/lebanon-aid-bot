@@ -173,6 +173,30 @@ describe('handleAid', () => {
     expect(result.ticketData).toMatchObject({ name: 'Ahmad', zone: 'Hamra' });
   });
 
+  // --- NEED_MAP label consistency ---
+
+  test('EN option 4 label stored in ticket matches AID_ASK_NEED display text', async () => {
+    kv.get
+      .mockResolvedValueOnce({ step: 'ask_need', name: 'Ahmad', zone: 'Hamra', lang: 'en' })
+      .mockResolvedValueOnce('en');
+    kv.del.mockResolvedValue();
+    sheets.appendRow.mockResolvedValue();
+
+    const result = await handleAid({ phoneHash: PHONE_HASH, text: '4' });
+    expect(result.ticketData.needType).toBe('Something else');
+  });
+
+  test('FR option 4 label stored in ticket matches AID_ASK_NEED display text', async () => {
+    kv.get
+      .mockResolvedValueOnce({ step: 'ask_need', name: 'Ahmad', zone: 'Hamra', lang: 'fr' })
+      .mockResolvedValueOnce('fr');
+    kv.del.mockResolvedValue();
+    sheets.appendRow.mockResolvedValue();
+
+    const result = await handleAid({ phoneHash: PHONE_HASH, text: '4' });
+    expect(result.ticketData.needType).toBe('Autre chose');
+  });
+
   // --- Lang persistence ---
 
   test('stores lang in KV state when starting flow', async () => {

@@ -8,8 +8,8 @@ const STATE_TTL = 600;
 
 const NEED_MAP = {
   ar: { '1': 'أكل', '2': 'فرشات / حرامات', '3': 'دوا', '4': 'شي تاني' },
-  en: { '1': 'Food', '2': 'Blankets', '3': 'Medicine', '4': 'Other' },
-  fr: { '1': 'Nourriture', '2': 'Couvertures', '3': 'Médicaments', '4': 'Autre' },
+  en: { '1': 'Food', '2': 'Blankets', '3': 'Medicine', '4': 'Something else' },
+  fr: { '1': 'Nourriture', '2': 'Couvertures', '3': 'Médicaments', '4': 'Autre chose' },
 };
 
 function generateTicket() {

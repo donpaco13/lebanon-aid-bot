@@ -1,33 +1,45 @@
-# Test Manuel — Flow "Demande d'aide" (Option 4)
+# Test Manuel — Bot WhatsApp Lebanon Aid
 
-> Ce document permet de tester manuellement le flow complet depuis WhatsApp.
-> Testé contre le code dans `src/features/aid.js` + `api/webhook.js`.
-
----
-
-## ⚠️ Bug connu — Google Sheets non écrit
-
-**`appendRow` n'est jamais appelé pour les demandes d'aide en production.**
-Les données sont loggées (`logger.info`) et les bénévoles sont notifiés (WhatsApp),
-mais **rien n'est écrit dans l'onglet `aid_requests` du Google Sheet**.
-À corriger avant la mise en prod : appeler `sheets.appendRow('aid_requests', {...})` dans `aid.js` à l'étape `ask_need`.
+> Guide de test end-to-end depuis WhatsApp.
+> Code source : `api/webhook.js`, `src/features/`, `src/bot/messages.js`.
+> Date de mise à jour : 2026-03-26
 
 ---
 
 ## Prérequis
 
-1. Avoir un compte WhatsApp connecté au sandbox Twilio (ou numéro prod).
-2. Avoir complété l'onboarding (choix de langue). Si non : envoyer n'importe quel message → onboarding s'affiche.
-3. Pour réinitialiser complètement : envoyer `reset`.
+- Numéro WhatsApp connecté au sandbox Twilio (ou numéro prod).
+- Variables d'env configurées : `TWILIO_AUTH_TOKEN`, `GOOGLE_SHEETS_ID`, `VERCEL_KV_*`.
+- Pour réinitialiser complètement l'état : envoyer `reset`.
 
 ---
 
-## Onboarding (premier message ou après `reset`)
+## Commandes universelles
 
-### Message envoyé (n'importe quoi, ou `reset`)
+Ces commandes fonctionnent **depuis n'importe quel état**, même en cours de flow, même si le rate limit est atteint.
+
+| Envoyer | Effet |
+|---------|-------|
+| `0` | Menu principal dans la langue stockée |
+| `menu` | Idem |
+| `قائمة` | Idem (arabe) |
+| `retour` | Idem (français) |
+| `language` | Relance l'onboarding trilingue, efface la langue stockée |
+| `langue` | Idem (français) |
+| `لغة` | Idem (arabe) |
+| `english` | Passe en anglais sans onboarding, affiche le menu EN |
+| `français` / `francais` | Passe en français, affiche le menu FR |
+| `reset` | Efface tout (lang + onboarding + aid flow), relance onboarding |
+
+---
+
+## Onboarding (premier contact ou après `reset`/`language`)
+
+### Message envoyé
 ```
 reset
 ```
+*(ou n'importe quel message depuis un numéro inconnu)*
 
 ### Réponse attendue
 ```
@@ -42,20 +54,163 @@ Bonjour 🇫🇷 Choisissez votre langue:
 > Pas de footer NAV sur ce message.
 
 ### Choix de langue
-| Envoyer | Langue active |
-|---------|--------------|
-| `1`     | Arabe        |
-| `2`     | Anglais      |
-| `3`     | Français     |
+
+| Envoyer | Langue active | Réponse attendue |
+|---------|--------------|-----------------|
+| `1` | Arabe | Menu en arabe + footer AR |
+| `2` | Anglais | Menu en anglais + footer EN |
+| `3` | Français | Menu en français + footer FR |
+| Autre chose | — | Onboarding répété |
 
 ---
 
-## Flow complet — Arabe 🇱🇧
+## Option 1 — Abris proches (Shelter)
 
-### Étape 0 — Déclencher le flow
-**Envoyer :** `4`
+### Déclencheurs
 
-**Réponse attendue :**
+| Langue | Messages valides |
+|--------|-----------------|
+| AR | `1`, `ملاجئ`, `ملجأ`, `مأوى`, `وين نام` |
+| EN | `1`, `shelter` |
+| FR | `1`, `abri` |
+| Toutes | Envoyer une localisation GPS 📍 |
+
+### Réponse attendue (données disponibles)
+
+```
+🏠 [Nom de l'abri]
+📍 [Adresse]
+🛏️ [Langue] Available spots: [N]
+📏 [X.X] km          ← uniquement si localisation GPS envoyée
+
+─────
+0️⃣ Main menu anytime
+🌐 Change language: "language"
+```
+> Plusieurs abris peuvent s'afficher, séparés par une ligne vide.
+
+### Réponse attendue (cache périmé — données > 15 min)
+
+```
+⚠️ This information was last verified at HH:MM UTC
+
+🏠 [Nom de l'abri]
+...
+```
+
+### Réponse attendue (aucun résultat pour cette zone)
+
+- AR : `ما لقيت نتائج لهيدي المنطقة. جرّب اسم تاني أو ابعتلي موقعك 📍`
+- EN : `No results found for this area. Try a different name or send your location 📍`
+- FR : `Aucun résultat pour cette zone. Essayez un autre nom ou envoyez votre position 📍`
+
+### Réponse attendue (Sheets inaccessible, pas de cache)
+
+```
+⚠️ [liste de numéros d'urgence]
+```
+
+---
+
+## Option 2 — Avertissements d'évacuation
+
+### Déclencheurs
+
+| Langue | Messages valides |
+|--------|-----------------|
+| AR | `2`, `إخلاء`, `هرب`, `خطر` |
+| EN | `2`, `evacuate`, `evacuation` |
+| FR | `2`, `évacuation`, `evacuation` |
+
+### Réponse attendue (évacuation active)
+
+```
+🔴 [Zone] : Immediate evacuation
+➡️ [Direction]
+
+─────
+0️⃣ Main menu anytime
+🌐 Change language: "language"
+```
+
+### Réponse attendue (situation stable)
+
+```
+🟢 [Zone] : Situation stable
+```
+
+### Réponse attendue (aucun avertissement en cours)
+
+- AR : `ما في تحذيرات إخلاء حاليًا ✅`
+- EN : `No evacuation warnings at this time ✅`
+- FR : `Aucun avertissement d'évacuation en ce moment ✅`
+
+### Réponse attendue (cache périmé — données > 5 min)
+
+```
+⚠️ This information was last verified at HH:MM UTC
+🔴 ...
+```
+
+---
+
+## Option 3 — Hôpitaux en service (Medical)
+
+### Déclencheurs
+
+| Langue | Messages valides |
+|--------|-----------------|
+| AR | `3`, `مستشفى`, `طبيب`, `دوا`, `مستشفيات` |
+| EN | `3`, `hospital`, `doctor`, `medicine` |
+| FR | `3`, `hôpital`, `hopital`, `médecin`, `medecin` |
+
+### Réponse attendue (données disponibles)
+
+```
+🏥 [Nom hôpital]
+🟢 Operational
+📍 [Adresse]
+📏 [X.X] km          ← si localisation envoyée
+⚠️ Last verified: HH:MM
+
+─────
+0️⃣ Main menu anytime
+🌐 Change language: "language"
+```
+
+**Statuts possibles :**
+| Statut | AR | EN | FR |
+|--------|----|----|-----|
+| operational | 🟢 شغّال | 🟢 Operational | 🟢 En service |
+| limited | 🟡 محدود | 🟡 Limited | 🟡 Limité |
+| closed | 🔴 مسكّر | 🔴 Closed | 🔴 Fermé |
+| destroyed | ⛔ مدمّر | ⛔ Destroyed | ⛔ Détruit |
+
+### Réponse attendue (cache périmé — données > 10 min)
+
+```
+⚠️ This information was last verified at HH:MM UTC
+🏥 ...
+```
+
+---
+
+## Option 4 — Demande d'aide (Aid flow)
+
+> Flow stateful — 4 étapes. État stocké en KV (TTL 10 min, clé `aid:hash`).
+> `0` ou `قائمة` annule le flow à tout moment.
+
+### ⚠️ Note bug corrigé
+
+`NEED_MAP` option 4 était inconsistant avec le menu affiché.
+Valeurs correctes après correction :
+- EN : `Something else` (était `Other`)
+- FR : `Autre chose` (était `Autre`)
+
+### Arabe 🇱🇧
+
+**Étape 0 — Déclencher**
+Envoyer : `4`
 ```
 شو اسمك؟
 
@@ -64,12 +219,8 @@ Bonjour 🇫🇷 Choisissez votre langue:
 🌐 تغيير اللغة: "لغة"
 ```
 
----
-
-### Étape 1 — Donner son nom
-**Envoyer :** `أحمد` *(ou n'importe quel prénom)*
-
-**Réponse attendue :**
+**Étape 1 — Nom**
+Envoyer : `أحمد`
 ```
 وين موجود/ة؟ (اسم المنطقة)
 
@@ -78,12 +229,8 @@ Bonjour 🇫🇷 Choisissez votre langue:
 🌐 تغيير اللغة: "لغة"
 ```
 
----
-
-### Étape 2 — Donner sa zone
-**Envoyer :** `الحمرا` *(ou n'importe quelle zone)*
-
-**Réponse attendue :**
+**Étape 2 — Zone**
+Envoyer : `الحمرا`
 ```
 شو محتاج/ة؟
 1️⃣ أكل
@@ -96,22 +243,8 @@ Bonjour 🇫🇷 Choisissez votre langue:
 🌐 تغيير اللغة: "لغة"
 ```
 
----
-
-### Étape 3 — Choisir le besoin
-**Options à tester :**
-
-| Envoyer | Besoin enregistré        |
-|---------|--------------------------|
-| `1`     | أكل                      |
-| `2`     | فرشات / حرامات           |
-| `3`     | دوا                      |
-| `4`     | شي تاني                  |
-| `1,3`   | أكل, دوا (multi-besoins) |
-| `1 2 3` | أكل, فرشات / حرامات, دوا |
-| texte libre | le texte brut (si aucun chiffre 1-4) |
-
-**Réponse attendue (ex. besoin `1`) :**
+**Étape 3 — Besoin**
+Envoyer : `1` (ou `2`, `3`, `4`, ou multi ex. `1,3`)
 ```
 ✅ تم تسجيل طلبك — رقم التذكرة: AID-XXXXXXX
 رح يتواصل معك متطوع بأقرب وقت.
@@ -120,17 +253,13 @@ Bonjour 🇫🇷 Choisissez votre langue:
 0️⃣ القائمة في أي وقت
 🌐 تغيير اللغة: "لغة"
 ```
-> Le numéro de ticket est au format `AID-` + timestamp base36, ex. `AID-M8KJ2F`.
-> Après cette réponse, les bénévoles `on_duty=true` reçoivent une notification WhatsApp.
 
 ---
 
-## Flow complet — Anglais 🇬🇧
+### Anglais 🇬🇧
 
-### Étape 0 — Déclencher le flow
-**Envoyer :** `4`
-
-**Réponse attendue :**
+**Étape 0 — Déclencher**
+Envoyer : `4`
 ```
 What is your name?
 
@@ -139,12 +268,8 @@ What is your name?
 🌐 Change language: "language"
 ```
 
----
-
-### Étape 1 — Donner son nom
-**Envoyer :** `Ahmad`
-
-**Réponse attendue :**
+**Étape 1 — Nom**
+Envoyer : `Ahmad`
 ```
 Where are you located? (area name)
 
@@ -153,12 +278,8 @@ Where are you located? (area name)
 🌐 Change language: "language"
 ```
 
----
-
-### Étape 2 — Donner sa zone
-**Envoyer :** `Hamra`
-
-**Réponse attendue :**
+**Étape 2 — Zone**
+Envoyer : `Hamra`
 ```
 What do you need?
 1️⃣ Food
@@ -171,10 +292,8 @@ What do you need?
 🌐 Change language: "language"
 ```
 
----
-
-### Étape 3 — Choisir le besoin
-**Réponse attendue (ex. besoin `2`) :**
+**Étape 3 — Besoin**
+Envoyer : `1`
 ```
 ✅ Your request has been registered — ticket: AID-XXXXXXX
 A volunteer will contact you shortly.
@@ -186,12 +305,10 @@ A volunteer will contact you shortly.
 
 ---
 
-## Flow complet — Français 🇫🇷
+### Français 🇫🇷
 
-### Étape 0 — Déclencher le flow
-**Envoyer :** `4`
-
-**Réponse attendue :**
+**Étape 0 — Déclencher**
+Envoyer : `4`
 ```
 Quel est votre prénom ?
 
@@ -200,12 +317,8 @@ Quel est votre prénom ?
 🌐 Changer de langue : "langue"
 ```
 
----
-
-### Étape 1 — Donner son nom
-**Envoyer :** `Ahmad`
-
-**Réponse attendue :**
+**Étape 1 — Nom**
+Envoyer : `Ahmad`
 ```
 Où êtes-vous ? (nom de la zone)
 
@@ -214,12 +327,8 @@ Où êtes-vous ? (nom de la zone)
 🌐 Changer de langue : "langue"
 ```
 
----
-
-### Étape 2 — Donner sa zone
-**Envoyer :** `Hamra`
-
-**Réponse attendue :**
+**Étape 2 — Zone**
+Envoyer : `Hamra`
 ```
 De quoi avez-vous besoin ?
 1️⃣ Nourriture
@@ -232,10 +341,8 @@ De quoi avez-vous besoin ?
 🌐 Changer de langue : "langue"
 ```
 
----
-
-### Étape 3 — Choisir le besoin
-**Réponse attendue (ex. besoin `3`) :**
+**Étape 3 — Besoin**
+Envoyer : `3`
 ```
 ✅ Votre demande a été enregistrée — ticket : AID-XXXXXXX
 Un bénévole vous contactera dès que possible.
@@ -247,21 +354,72 @@ Un bénévole vous contactera dès que possible.
 
 ---
 
-## Cas limites à tester
+### Multi-besoins et cas limites
 
-| Scénario | Envoyer | Comportement attendu |
-|----------|---------|----------------------|
-| Annuler en cours de flow | `0` ou `قائمة` | Flow effacé, menu principal affiché |
-| Changer de langue en cours | `english` / `français` | Flow effacé, menu dans nouvelle langue |
-| Multi-besoins | `1,3` ou `1 2` | Ticket avec `أكل, دوا` (dédupliqué) |
-| Rate limit | Envoyer 6+ msgs rapides | `⚠️ عم تبعت كتير رسائل...` |
-| Texte libre au lieu de chiffre | `j'ai besoin de tout` | Ticket avec le texte brut comme besoin |
+| Envoyer au besoin | Valeur stockée dans ticket |
+|-------------------|---------------------------|
+| `1` | Food / أكل / Nourriture |
+| `2` | Blankets / فرشات / حرامات / Couvertures |
+| `3` | Medicine / دوا / Médicaments |
+| `4` | Something else / شي تاني / Autre chose |
+| `1,3` | Food, Medicine |
+| `1 2 3` | Food, Blankets, Medicine |
+| `1 1 2` | Food, Blankets (dédupliqué) |
+| texte libre (ex. `j'ai besoin de tout`) | le texte brut |
 
 ---
 
-## Vérifications post-test
+## Option 5 — Enregistrement comme déplacé (Registration)
+
+### Déclencheurs
+
+| Langue | Messages valides |
+|--------|-----------------|
+| AR | `5`, `تسجيل`, `نازح`, `اتسجل` |
+| EN | `5`, `register`, `displaced` |
+| FR | `5`, `enregistrer` |
+
+### Réponse attendue
+
+Une liste d'étapes administratives (lues depuis le Sheet `registration`) :
+
+```
+📋 Step 1: [Texte de l'étape]
+📄 Documents: [Liste des documents]
+🔗 [Lien optionnel]
+
+📋 Step 2: ...
+
+─────
+0️⃣ Main menu anytime
+🌐 Change language: "language"
+```
+> Le contenu exact dépend des données dans le Sheet `registration`.
+
+---
+
+## Cas d'erreur généraux
+
+| Situation | Réponse attendue |
+|-----------|-----------------|
+| Sheets inaccessible, pas de cache | `⚠️` + liste numéros urgence (EMERGENCY_FALLBACK) |
+| Sheets en chargement, cache vide | `🔄 Data is being loaded...` (DATA_LOADING) |
+| Trop de messages | `⚠️ You are sending too many messages...` (RATE_LIMITED) |
+| Erreur interne | `⚠️ Unable to retrieve information right now...` (ERROR_SHEETS_DOWN) |
+
+---
+
+## Checklist de vérification post-test
+
+### Option 4 (Aid) uniquement
 
 - [ ] Ticket reçu dans la réponse WhatsApp (format `AID-XXXXXX`)
 - [ ] Bénévoles `on_duty=true` ont reçu la notification (vérifier leur WhatsApp)
 - [ ] Log `aid_request_submitted` visible dans Vercel Logs
-- [ ] ~~Ligne ajoutée dans l'onglet `aid_requests` du Google Sheet~~ **⚠️ Non implémenté**
+- [ ] Ligne ajoutée dans l'onglet `aid_requests` du Google Sheet
+
+### Toutes options
+
+- [ ] Footer NAV affiché (sauf onboarding)
+- [ ] Langue correcte dans toute la réponse
+- [ ] `0` retourne bien au menu depuis chaque étape
