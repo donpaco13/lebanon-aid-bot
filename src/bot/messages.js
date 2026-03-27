@@ -2,51 +2,50 @@
 
 const STRINGS = {
   MENU: {
-    ar: `أهلا 👋
-أنا بوت المساعدة للنازحين بلبنان.
-بعتلي رقم أو صوت:
-
-1️⃣ ملاجئ قريبة
-2️⃣ تحذيرات إخلاء
-3️⃣ مستشفيات شغّالة
-4️⃣ طلب مساعدة (أكل، فرشات، دوا)
-5️⃣ تسجيل كنازح
-
-أو ابعتلي موقعك 📍 لألاقيلك أقرب ملجأ.
-─────
-ℹ️ المعلومات تتحدّث كل 30 دقيقة
-🆘 خطر فوري: 140 أو 125
-0️⃣ هذه القائمة في أي وقت`,
-    en: `Hello 👋
-I'm a humanitarian aid bot for displaced people in Lebanon.
-Send a number or voice message:
-
-1️⃣ Nearby shelters
-2️⃣ Evacuation warnings
-3️⃣ Operating hospitals
-4️⃣ Request aid (food, blankets, medicine)
-5️⃣ Register as displaced
-
-Or send your location 📍 to find the nearest shelter.
-─────
-ℹ️ Data updated every 30 minutes
-🆘 Immediate danger: 140 or 125
-0️⃣ This menu anytime`,
-    fr: `Bonjour 👋
-Je suis un bot d'aide humanitaire pour les déplacés au Liban.
-Envoyez un numéro ou un message vocal :
-
-1️⃣ Abris proches
-2️⃣ Avertissements d'évacuation
-3️⃣ Hôpitaux en service
-4️⃣ Demander de l'aide (nourriture, couvertures, médicaments)
-5️⃣ S'enregistrer comme déplacé
-
-Ou envoyez votre position 📍 pour trouver l'abri le plus proche.
-─────
-ℹ️ Données mises à jour toutes les 30 min
-🆘 Danger immédiat : 140 ou 125
-0️⃣ Ce menu à tout moment`,
+    ar: `أهلا 👋 أنا بوت المساعدة الإنسانية للبنان.
+اختر خياراً:
+1️⃣ طلب مساعدة (أكل، مأوى، دوا)
+2️⃣ آخر الأخبار والتحديثات
+3️⃣ أرقام الطوارئ`,
+    en: `Hi 👋 I'm the Lebanon humanitarian aid bot.
+Choose an option:
+1️⃣ Request aid (food, shelter, medicine)
+2️⃣ Latest updates
+3️⃣ Emergency numbers`,
+    fr: `Bonjour 👋 Je suis le bot d'aide humanitaire pour le Liban.
+Choisissez une option :
+1️⃣ Demander de l'aide (nourriture, abri, médicaments)
+2️⃣ Dernières informations
+3️⃣ Numéros d'urgence`,
+  },
+  EMERGENCY_NUMBERS: {
+    ar: `🚨 الصليب الأحمر اللبناني (24/7): 140
+🚒 الدفاع المدني: 125
+👮 الشرطة: 112
+🔥 الإطفاء: 175
+🏥 MoPH طوارئ صحية: 1787
+💊 أدوية أمراض خطيرة: 1214
+🧠 منع الانتحار / ضائقة نفسية: 1564
+🍞 WFP مساعدة غذائية (إثنين-سبت 8-19): 1526
+📋 UNHCR تسجيل (إثنين-جمعة 8-17): 04726111`,
+    en: `🚨 Lebanese Red Cross (24/7): 140
+🚒 Civil Defence: 125
+👮 Police: 112
+🔥 Firefighters: 175
+🏥 MoPH health emergencies: 1787
+💊 Medications for serious illness: 1214
+🧠 Suicide prevention / distress: 1564
+🍞 WFP food aid (Mon-Sat 8am-7pm): 1526
+📋 UNHCR registration (Mon-Fri 8am-5pm): 04726111`,
+    fr: `🚨 Croix-Rouge Libanaise (24h/7j) : 140
+🚒 Défense Civile : 125
+👮 Police : 112
+🔥 Pompiers : 175
+🏥 MoPH urgences santé : 1787
+💊 Médicaments maladies graves : 1214
+🧠 Prévention suicide / détresse : 1564
+🍞 WFP aide alimentaire (lun-sam 8h-19h) : 1526
+📋 UNHCR enregistrement (lun-ven 8h-17h) : 04726111`,
   },
   VOICE_RECEIVED: {
     ar: 'بعتلي صوت، عم بسمعو... 🎧',

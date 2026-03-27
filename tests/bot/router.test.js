@@ -2,24 +2,24 @@
 const { detectIntent } = require('../../src/bot/router');
 
 describe('detectIntent', () => {
-  test('detects menu number 1 as shelter', () => {
-    expect(detectIntent('1')).toEqual({ intent: 'shelter', zone: null });
+  test('detects menu number 1 as aid', () => {
+    expect(detectIntent('1')).toEqual({ intent: 'aid', zone: null });
   });
 
-  test('detects menu number 2 as evacuation', () => {
-    expect(detectIntent('2')).toEqual({ intent: 'evacuation', zone: null });
+  test('detects menu number 2 as updates', () => {
+    expect(detectIntent('2')).toEqual({ intent: 'updates', zone: null });
   });
 
-  test('detects menu number 3 as medical', () => {
-    expect(detectIntent('3')).toEqual({ intent: 'medical', zone: null });
+  test('detects menu number 3 as emergency', () => {
+    expect(detectIntent('3')).toEqual({ intent: 'emergency', zone: null });
   });
 
-  test('detects menu number 4 as aid', () => {
-    expect(detectIntent('4')).toEqual({ intent: 'aid', zone: null });
+  test('detects menu number 4 as menu (no longer mapped)', () => {
+    expect(detectIntent('4')).toEqual({ intent: 'menu', zone: null });
   });
 
-  test('detects menu number 5 as registration', () => {
-    expect(detectIntent('5')).toEqual({ intent: 'registration', zone: null });
+  test('detects menu number 5 as menu (no longer mapped)', () => {
+    expect(detectIntent('5')).toEqual({ intent: 'menu', zone: null });
   });
 
   test('detects shelter keywords in Arabic', () => {

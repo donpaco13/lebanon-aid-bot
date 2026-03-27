@@ -674,7 +674,7 @@ describe('POST /api/webhook', () => {
     const res = await request(app)
       .post('/api/webhook')
       .type('form')
-      .send({ Body: '1', From: 'whatsapp:+961700000099', NumMedia: '0' });
+      .send({ Body: 'ملجأ', From: 'whatsapp:+961700000099', NumMedia: '0' });
 
     expect(res.status).toBe(200);
     expect(spy).toHaveBeenCalledWith('EMERGENCY_FALLBACK', expect.any(String));

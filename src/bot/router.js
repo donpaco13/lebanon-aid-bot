@@ -9,7 +9,7 @@ const INTENT_KEYWORDS = {
   registration: ['تسجيل', 'ورق', 'نازح', 'اتسجل', 'نازحين', 'register', 'displaced', 'enregistrer'],
 };
 
-const MENU_NUMBERS = { '1': 'shelter', '2': 'evacuation', '3': 'medical', '4': 'aid', '5': 'registration' };
+const MENU_NUMBERS = { '1': 'aid', '2': 'updates', '3': 'emergency' };
 
 const MENU_TRIGGERS = ['رجعني', 'رجّعني', 'menu', 'قائمة', 'ابدا', 'ابدأ'];
 

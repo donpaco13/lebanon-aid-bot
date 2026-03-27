@@ -10,6 +10,7 @@ const { handleEvacuation } = require('../src/features/evacuation');
 const { handleMedical } = require('../src/features/medical');
 const { handleAid } = require('../src/features/aid');
 const { handleRegistration } = require('../src/features/registration');
+const { handleUpdates } = require('../src/features/updates');
 const { checkRateLimit } = require('../src/services/rateLimiter');
 const { notifyVolunteers } = require('../src/services/notifier');
 const { hashPhone, sanitizeLogs } = require('../src/utils/phone');
@@ -75,7 +76,11 @@ app.post('/api/webhook', async (req, res) => {
 
     // Process text intent
     const response = await processIntent(text, phoneHash, location);
-    twiml.message(response);
+    if (Array.isArray(response)) {
+      for (const msg of response) twiml.message(msg);
+    } else {
+      twiml.message(response);
+    }
     return res.type('text/xml').send(twiml.toString());
   } catch (err) {
     console.error(sanitizeLogs(`Webhook error: ${err.message}`));
@@ -226,15 +231,26 @@ async function _processIntentInner(text, phoneHash, location) {
       if (result.error) return [messages.t('EMERGENCY_FALLBACK', lang), lang];
       return [result.steps.map(s => messages.formatRegistrationStep(s, lang)).join('\n\n'), lang];
     }
+    case 'updates': {
+      const result = await handleUpdates({ lang });
+      const footer = messages.t('NAV_FOOTER', lang);
+      const msgs = [...result.messages];
+      msgs[msgs.length - 1] = msgs[msgs.length - 1] + '\n\n' + footer;
+      return [msgs, lang];
+    }
+    case 'emergency':
+      return [messages.t('EMERGENCY_NUMBERS', lang), lang];
     default:
       return [messages.t('MENU', lang), lang];
   }
 }
 
 // Appends NAV_FOOTER to all responses except ONBOARDING (lang === null).
+// Array responses (multi-message) have the footer appended to the last message by the caller.
 async function processIntent(text, phoneHash, location) {
   const [response, lang] = await _processIntentInner(text, phoneHash, location);
   if (!lang) return response;
+  if (Array.isArray(response)) return response;
   return response + '\n\n' + messages.t('NAV_FOOTER', lang);
 }
 

@@ -7,7 +7,7 @@ describe('t()', () => {
   });
 
   test('returns English string for en', () => {
-    expect(t('MENU', 'en')).toContain('Hello');
+    expect(t('MENU', 'en')).toContain('Hi');
   });
 
   test('returns French string for fr', () => {
@@ -21,7 +21,7 @@ describe('t()', () => {
   });
 
   test('falls back to en for unknown lang', () => {
-    expect(t('MENU', 'xx')).toContain('Hello');
+    expect(t('MENU', 'xx')).toContain('Hi');
   });
 
   test('throws for unknown key in non-production', () => {
@@ -65,20 +65,45 @@ describe('NAV_FOOTER', () => {
   });
 });
 
-describe('MENU enrichi', () => {
-  test('Arabic menu contains emergency numbers', () => {
-    expect(t('MENU', 'ar')).toContain('140');
-    expect(t('MENU', 'ar')).toContain('125');
+describe('MENU', () => {
+  test('Arabic menu has 3 options', () => {
+    const msg = t('MENU', 'ar');
+    expect(msg).toContain('1️⃣');
+    expect(msg).toContain('2️⃣');
+    expect(msg).toContain('3️⃣');
   });
 
-  test('English menu contains emergency numbers', () => {
-    expect(t('MENU', 'en')).toContain('140');
-    expect(t('MENU', 'en')).toContain('125');
+  test('English menu has 3 options', () => {
+    const msg = t('MENU', 'en');
+    expect(msg).toContain('1️⃣');
+    expect(msg).toContain('2️⃣');
+    expect(msg).toContain('3️⃣');
   });
 
-  test('French menu contains emergency numbers', () => {
-    expect(t('MENU', 'fr')).toContain('140');
-    expect(t('MENU', 'fr')).toContain('125');
+  test('French menu has 3 options', () => {
+    const msg = t('MENU', 'fr');
+    expect(msg).toContain('1️⃣');
+    expect(msg).toContain('2️⃣');
+    expect(msg).toContain('3️⃣');
+  });
+});
+
+describe('EMERGENCY_NUMBERS', () => {
+  test('Arabic emergency numbers contains 140 and 125', () => {
+    expect(t('EMERGENCY_NUMBERS', 'ar')).toContain('140');
+    expect(t('EMERGENCY_NUMBERS', 'ar')).toContain('125');
+  });
+
+  test('English emergency numbers contains 140 and 125', () => {
+    expect(t('EMERGENCY_NUMBERS', 'en')).toContain('140');
+    expect(t('EMERGENCY_NUMBERS', 'en')).toContain('125');
+    expect(t('EMERGENCY_NUMBERS', 'en')).toContain('1526');
+  });
+
+  test('French emergency numbers contains 140 and 04726111', () => {
+    expect(t('EMERGENCY_NUMBERS', 'fr')).toContain('140');
+    expect(t('EMERGENCY_NUMBERS', 'fr')).toContain('04726111');
+    expect(t('EMERGENCY_NUMBERS', 'fr')).toContain('175');
   });
 });
 
